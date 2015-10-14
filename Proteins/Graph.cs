@@ -121,6 +121,28 @@ namespace GraphVis
 		}
 
 
+
+		public List<int> GetAdjacentNodes(int nodeIndex)
+		{
+			var edges = GetEdges(nodeIndex);
+			List<int> nodes = new List<int>();
+			foreach (int ei in edges)
+			{
+				var edge = Edges[ei];
+				if (edge.End1 != nodeIndex)
+				{
+					nodes.Add(edge.End1);
+				}
+				else
+				{
+					nodes.Add(edge.End2);
+				}
+			}
+			return nodes;
+		}
+
+
+
 		public bool AddChildren(int number, int index)
 		{
 			if (number <= 0)
@@ -267,15 +289,22 @@ namespace GraphVis
 
 		float dist(int index1, int index2)
 		{
+			return Edges[GetEdgeIndex(index1, index2)].Length;
+		}
+
+
+		public int GetEdgeIndex(int index1, int index2)
+		{
 			foreach (int edge in adjacencyList[index1])
 			{
 				if (Edges[edge].End1 == index2 || Edges[edge].End2 == index2)
 				{
-					return Edges[edge].Length;
+					return edge;
 				}
 			}
-			throw new InvalidOperationException( "Requested edges are not adjacent" );
+			throw new InvalidOperationException("Requested edges are not adjacent");
 		}
+
 
 		public virtual void WriteToFile(string path)
 		{

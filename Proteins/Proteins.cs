@@ -19,6 +19,20 @@ namespace Proteins
 
 		int selectedNodeIndex;
 		bool nodeSelected;
+		int[] membrane		= { 0, 1, 2, 20 };
+		int[] cytoplasma	= { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+		int[] nucleus		= { 8, 12, 13, 14, 15, 16, 17, 18, 19 };
+		int[] jumpers		= { 8, 12 };
+		int[] outerNodes	= { 0, 1, 2 };
+
+		List<int> hotNodes;
+		List<int> coldNodes;
+		ProteinGraph protGraph;
+
+		Random rnd = new Random();
+
+		int timer;
+		int delay;
 
 		/// <summary>
 		/// Proteins constructor
@@ -51,6 +65,14 @@ namespace Proteins
 
 			nodeSelected = false;
 			selectedNodeIndex = 0;
+			hotNodes	= new List<int>();
+			coldNodes	= new List<int>();
+			protGraph	= new ProteinGraph();
+			protGraph.ReadFromFile("D:/proteins/signalling_table.csv");
+
+			timer = 0;
+			delay = 500;
+
 		}
 
 
@@ -114,21 +136,19 @@ namespace Proteins
 			}
 			if (e.Key == Keys.X)
 			{
-				var graphSys = GetService<GraphSystem>();
-				ProteinGraph protGraph = new ProteinGraph();
-				protGraph.ReadFromFile("D:/proteins/signalling_table.csv");
+				var graphSys = GetService<GraphSystem>();	
 
 				// add categories of nodes with different localization:
 				// category 1 (membrane):
-				graphSys.AddCategory(new List<int> { 0, 1, 2, 20 }, new Vector3(5000, 0, 0), 700);
+				graphSys.AddCategory(membrane, new Vector3(0, 0, 0), 700);
 //				graphSys.AddCategory(new List<int> { 0, 1, 2, 20 }, new Vector3(2000, 0, 0), 10);
 
 				// category 2 (cytoplasma):
-				graphSys.AddCategory(new List<int> { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }, new Vector3(5000, 0, 0), 300);
+				graphSys.AddCategory(cytoplasma, new Vector3(0, 0, 0), 300);
 //				graphSys.AddCategory(new List<int> { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }, new Vector3(0, 0, 0), 10);
 
 				// category 3 (nucleus):
-				graphSys.AddCategory(new List<int> { 8, 12, 13, 14, 15, 16, 17, 18, 19 }, new Vector3(5000, 0, 0), 100);
+				graphSys.AddCategory(nucleus, new Vector3(0, 0, 0), 100);
 //				graphSys.AddCategory(new List<int> { 8, 12, 13, 14, 15, 16, 17, 18, 19 }, new Vector3(1000, 1000, 0), 10);
 
 				graphSys.AddGraph(protGraph);
@@ -156,9 +176,45 @@ namespace Proteins
 				if (nodeSelected = pSys.ClickNode(cursor, StereoEye.Mono, 0.025f, out selNode))
 				{
 					selectedNodeIndex = selNode;
-					pSys.Select(selectedNodeIndex);
+	//				pSys.Select(selectedNodeIndex);
+					var adjNodes = protGraph.GetAdjacentNodes(selNode);
+					Console.Write("id = " + selNode + ":  ");
+					foreach (var an in adjNodes)
+					{
+						Console.Write(an + ", ");
+					}
+					Console.WriteLine();
 				}
+
+
 			}
+			if (e.Key == Keys.G)
+			{
+				int startNode = outerNodes[rnd.Next(outerNodes.Length)];
+
+				var grSys = GetService<GraphSystem>();
+	//			Graph graph = grSys.GetGraph();
+				
+				hotNodes.Add(startNode);
+				grSys.Select(startNode);
+//				pSys.Select(startNode);
+//				int edgeIndex = graph.GetEdgeIndex(8, 13);
+				
+
+	//			Graph.Edge edge1 = graph.Edges[13];
+	//			Graph.Edge edge2 = graph.Edges[8];
+	//			float tmp = edge1.Value;
+	//			edge1.Value = edge2.Value;
+	//			edge2.Value = tmp;
+
+	//			graph.Edges[13] = edge1;
+	//			graph.Edges[8] = edge2;
+	//			pSys.UpdateGraph(graph);
+			}
+//			if (e.Key == Keys.R)
+//			{
+//				propagate();
+//			}
 
 
 		}
@@ -184,6 +240,13 @@ namespace Proteins
 		protected override void Update(GameTime gameTime)
 		{
 			var ds = GetService<DebugStrings>();
+			timer += gameTime.Elapsed.Milliseconds;
+
+			if (timer > delay)
+			{
+				propagate();
+				timer = 0;
+			}
 
 			ds.Add(Color.Orange, "FPS {0}", gameTime.Fps);
 			ds.Add("F1   - show developer console");
@@ -208,6 +271,38 @@ namespace Proteins
 			base.Draw(gameTime, stereoEye);
 
 			//	Draw stuff here :
+		}
+
+
+		void propagate()
+		{	
+			if (hotNodes.Count > 0)
+			{
+				List<int> newlyExcitedNodes = new List<int>();
+				var grSys = GetService<GraphSystem>();
+				foreach (int hn in hotNodes)
+				{
+					coldNodes.Add(hn);
+					var adjNodes = protGraph.GetAdjacentNodes(hn);
+					foreach (var an in adjNodes)
+					{
+						if (!hotNodes.Contains(an) && !coldNodes.Contains(an))
+						{
+							newlyExcitedNodes.Add(an);
+						}
+					}
+				}
+				hotNodes.Clear();
+				hotNodes = newlyExcitedNodes;
+				if (hotNodes.Count > 0)
+				{
+					grSys.Select(hotNodes);
+				}
+				else
+				{
+					coldNodes.Clear();
+				}
+			}
 		}
 	}
 }
