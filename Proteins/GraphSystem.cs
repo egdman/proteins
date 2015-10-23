@@ -112,9 +112,11 @@ namespace GraphVis {
 		StructuredBuffer	selectedEdgesBuffer; // list of indices of highlighted edges
 
 		ConstantBuffer		paramsCB;
+
 		List<List<int> >	edgeIndexLists;
 		List<Link>			edgeList;
 		List<Particle3d>	nodeList;
+
 		Queue<int>			commandQueue;
 		Random				rand = new Random();
 
@@ -123,6 +125,7 @@ namespace GraphVis {
 		int		numSelectedNodes;
 		int		numSelectedEdges;
 		int		referenceNodeIndex;
+
 
 
 		public Color BackgroundColor
@@ -485,7 +488,7 @@ namespace GraphVis {
 				}
 				foreach (var l in edgeList)
 				{
-					graph.AddEdge(new Graph.Edge((int)l.par1, (int)l.par2, l.length, l.strength));
+					graph.AddEdge(new Edge((int)l.par1, (int)l.par2, l.length, l.strength));
 				}
 				return graph;
 			}

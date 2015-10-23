@@ -9,27 +9,6 @@ namespace GraphVis
 {
 	public class Graph
 	{
-		public struct Edge
-		{
-			public int		End1;
-			public int		End2;
-			public float	Length;
-			public float	Value;
-
-			public Edge(int end1, int end2, float length, float value)
-			{
-				End1 = end1;
-				End2 = end2;
-				Length = length;
-				Value = value;
-			}
-
-			public string GetInfo()
-			{
-				return "id1:" + End1 + ",id2:" + End2 + ",length:" + Length + ",value:" + Value;
-			}
-		}
-
 		List<BaseNode>	nodeList;
 		List<Edge>	edgeList;
 		List<List<int>> adjacencyList;
@@ -59,12 +38,12 @@ namespace GraphVis
 		public void AddEdge(int node1, int node2)
 		{
 			edgeList.Add( new Edge
-				{
-					End1 = node1,
-					End2 = node2,
-					Length = 1.0f,
-					Value = 0.1f,
-				}
+				(
+					node1,
+					node2,
+					1.0f,
+					0.1f
+				)
 			);
 			adjacencyList[node1].Add( EdgeCount - 1 );
 			adjacencyList[node2].Add( EdgeCount - 1 );
@@ -303,6 +282,20 @@ namespace GraphVis
 				}
 			}
 			throw new InvalidOperationException("Requested edges are not adjacent");
+		}
+
+
+		public List<int> GetEdgeIndices(int index1, int index2)
+		{
+			List<int> indices = new List<int>();
+			foreach (int edge in adjacencyList[index1])
+			{
+				if (Edges[edge].End1 == index2 || Edges[edge].End2 == index2)
+				{
+					indices.Add(edge);
+				}
+			}
+			return indices;
 		}
 
 

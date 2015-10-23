@@ -20,7 +20,7 @@ namespace Proteins
 		int selectedNodeIndex;
 		bool nodeSelected;
 		int[] membrane		= { 0, 1, 2, 20 };
-		int[] cytoplasma	= { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+		int[] cytoplasm		= { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
 		int[] nucleus		= { 8, 12, 13, 14, 15, 16, 17, 18, 19 };
 		int[] jumpers		= { 8, 12 };
 		int[] outerNodes	= { 0, 1, 2 };
@@ -32,8 +32,12 @@ namespace Proteins
 		Random rnd = new Random();
 
 		int timer;
-		int delay;
+		int timer2;
 
+		int delay;
+		int delay2;
+
+		bool YAPNucleus;
 		/// <summary>
 		/// Proteins constructor
 		/// </summary>
@@ -68,10 +72,14 @@ namespace Proteins
 			hotNodes	= new List<int>();
 			coldNodes	= new List<int>();
 			protGraph	= new ProteinGraph();
-			protGraph.ReadFromFile("D:/proteins/signalling_table.csv");
 
 			timer = 0;
+			timer2 = 0;
+
 			delay = 500;
+			delay2 = 5000;
+
+			YAPNucleus = true;
 
 		}
 
@@ -88,6 +96,9 @@ namespace Proteins
 			InputDevice.KeyDown += InputDevice_KeyDown;
 
 			//	load content & create graphics and audio resources here:
+
+			protGraph.ReadFromFile("../../../../signalling_table.csv");
+			protGraph.GetProtein("bCAT").Deactivate();
 		}
 
 
@@ -141,16 +152,14 @@ namespace Proteins
 				// add categories of nodes with different localization:
 				// category 1 (membrane):
 				graphSys.AddCategory(membrane, new Vector3(0, 0, 0), 700);
-//				graphSys.AddCategory(new List<int> { 0, 1, 2, 20 }, new Vector3(2000, 0, 0), 10);
 
-				// category 2 (cytoplasma):
-				graphSys.AddCategory(cytoplasma, new Vector3(0, 0, 0), 300);
-//				graphSys.AddCategory(new List<int> { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }, new Vector3(0, 0, 0), 10);
+				// category 2 (cytoplasm):
+				graphSys.AddCategory(cytoplasm, new Vector3(0, 0, 0), 300);
 
 				// category 3 (nucleus):
 				graphSys.AddCategory(nucleus, new Vector3(0, 0, 0), 100);
-//				graphSys.AddCategory(new List<int> { 8, 12, 13, 14, 15, 16, 17, 18, 19 }, new Vector3(1000, 1000, 0), 10);
 
+	//			protGraph.Nodes[
 				graphSys.AddGraph(protGraph);
 			}
 			if (e.Key == Keys.P)
@@ -176,12 +185,17 @@ namespace Proteins
 				if (nodeSelected = pSys.ClickNode(cursor, StereoEye.Mono, 0.025f, out selNode))
 				{
 					selectedNodeIndex = selNode;
-	//				pSys.Select(selectedNodeIndex);
-					var adjNodes = protGraph.GetAdjacentNodes(selNode);
-					Console.Write("id = " + selNode + ":  ");
-					foreach (var an in adjNodes)
+					var adjEdges = protGraph.GetEdges(selNode);
+					string protName = ((NodeWithText)protGraph.Nodes[selNode]).Text;
+					Console.WriteLine("id = " + selNode +
+						" name: " + protName + ":  ");
+					foreach (var ae in adjEdges)
 					{
-						Console.Write(an + ", ");
+						var interaction = protGraph.Edges[ae];
+						if (interaction.End1 == selNode)
+						{
+							Console.WriteLine(protGraph.Edges[ae].GetInfo());
+						}
 					}
 					Console.WriteLine();
 				}
@@ -190,13 +204,20 @@ namespace Proteins
 			}
 			if (e.Key == Keys.G)
 			{
-				int startNode = outerNodes[rnd.Next(outerNodes.Length)];
+				if (YAPNucleus)
+				{
+					decouple("YAP", "TCF");
+				}
+				else
+				{
+					couple("YAP", "TCF");
+				}
+				YAPNucleus = !YAPNucleus;
 
-				var grSys = GetService<GraphSystem>();
+				
 	//			Graph graph = grSys.GetGraph();
 				
-				hotNodes.Add(startNode);
-				grSys.Select(startNode);
+
 //				pSys.Select(startNode);
 //				int edgeIndex = graph.GetEdgeIndex(8, 13);
 				
@@ -240,12 +261,18 @@ namespace Proteins
 		protected override void Update(GameTime gameTime)
 		{
 			var ds = GetService<DebugStrings>();
-			timer += gameTime.Elapsed.Milliseconds;
-
+			timer	+= gameTime.Elapsed.Milliseconds;
+			timer2	+= gameTime.Elapsed.Milliseconds;
 			if (timer > delay)
 			{
 				propagate();
 				timer = 0;
+			}
+
+			if (timer2 > delay2)
+			{
+				startPropagate();
+				timer2 = 0;
 			}
 
 			ds.Add(Color.Orange, "FPS {0}", gameTime.Fps);
@@ -284,11 +311,17 @@ namespace Proteins
 				{
 					coldNodes.Add(hn);
 					var adjNodes = protGraph.GetAdjacentNodes(hn);
-					foreach (var an in adjNodes)
+					var adjEdges = protGraph.GetEdges(hn);
+					foreach (var ae in adjEdges)
 					{
-						if (!hotNodes.Contains(an) && !coldNodes.Contains(an))
+						var interaction = protGraph.Edges[ae];
+						if (interaction.End1 == hn)
 						{
-							newlyExcitedNodes.Add(an);
+							int adjNodeIndex = interaction.End2;
+							if (!hotNodes.Contains(adjNodeIndex) && !coldNodes.Contains(adjNodeIndex))
+							{
+								newlyExcitedNodes.Add(adjNodeIndex);
+							}
 						}
 					}
 				}
@@ -303,6 +336,56 @@ namespace Proteins
 					coldNodes.Clear();
 				}
 			}
+		}
+
+		void startPropagate()
+		{
+			var grSys = GetService<GraphSystem>();
+
+			if (grSys.NodeCount == 0)
+			{
+				return;
+			}
+
+//			int startNode = outerNodes[rnd.Next(outerNodes.Length)];
+			int startNode = protGraph.GetIdByName("YAP");
+			hotNodes.Add(startNode);
+			grSys.Select(hotNodes);
+		}
+
+
+		void couple(string name1, string name2)
+		{
+			changeEdgeValue(name1, name2, 5.0f);
+		}
+
+
+		void decouple(string name1, string name2)
+		{
+			changeEdgeValue(name1, name2, 0.5f);
+		}
+
+
+		void changeEdgeValue(string name1, string name2, float value)
+		{
+			var grSys = GetService<GraphSystem>();
+			int id1 = protGraph.GetIdByName(name1);
+			int id2 = protGraph.GetIdByName(name2);
+			List<Tuple<ProteinInteraction, int>> interactions = 
+				protGraph.GetInteractions(name1, name2);
+
+			var graph = grSys.GetGraph();
+			foreach (var inter in interactions)
+			{
+				int index = inter.Item2;
+				var interaction = inter.Item1;
+				if (interaction.Type == "b")
+				{
+					graph.Edges[index].Value = value;
+					
+				}
+			}
+			grSys.UpdateGraph(graph);
 		}
 	}
 }

@@ -10,7 +10,9 @@ using Fusion.Graphics;
 using Fusion.Mathematics;
 using Fusion.Input;
 
-namespace GraphVis
+using GraphVis;
+
+namespace Proteins
 {
 	class ProteinGraph : GraphFromFile
 	{
@@ -20,6 +22,20 @@ namespace GraphVis
 			public int id1;
 			public int id2;
 			public string type;
+		}
+		Dictionary<string, int> idByName;
+
+
+		public int GetIdByName(string name)
+		{
+			return idByName[name];
+		}
+		
+
+
+		public ProteinGraph() : base()
+		{
+			idByName = new Dictionary<string, int>();
 		}
 
 		public override void ReadFromFile(string path)
@@ -49,10 +65,12 @@ namespace GraphVis
 				if (!uniqueIds.ContainsKey(id))
 				{
 					uniqueIds.Add(id, numNodes);
+					idByName.Add(name, numNodes);
 					++numNodes;
 
 					Color color = new Color((float)cat1, (float)cat2, (float)cat3);
-					AddNode(new NodeWithText(name, 1.0f, color));
+					AddNode(new ProteinNode(name, 1.0f, color));
+					 
 				}
 				if (otherId >= 0)
 				{
@@ -66,13 +84,44 @@ namespace GraphVis
 			}
 		}
 
+
+		public List<Tuple<ProteinInteraction, int>> GetInteractions(string name1, string name2)
+		{
+			int id1 = GetIdByName(name1);
+			int id2 = GetIdByName(name2);
+			var edgeIndices = GetEdgeIndices(id1, id2);
+			List<Tuple<ProteinInteraction, int>> interactions
+				= new List<Tuple<ProteinInteraction, int>>();
+			foreach ( int ei in edgeIndices )
+			{
+				interactions.Add(
+					new Tuple<ProteinInteraction, int>
+						((ProteinInteraction)Edges[ei], ei)
+					);
+			}
+			return interactions;
+		}
+
+
+		public ProteinNode GetProtein(string name)
+		{
+			return (ProteinNode)Nodes[idByName[name]];
+		}
+
+
+		public ProteinInteraction GetInteraction(int index)
+		{
+			return (ProteinInteraction)Edges[index];
+		}
+
+
 		void addInteraction(int id1, int id2, string interType)
 		{
-			Edge edge = new Edge();
+			ProteinInteraction edge = new ProteinInteraction();
 			edge.End1 = id1;
 			edge.End2 = id2;
 			edge.Length = 1.0f;
-
+			edge.Type = new string(interType[0], 1);
 			float strength = 0;
 			if (interType.Length == 0)
 			{
