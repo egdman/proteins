@@ -317,43 +317,54 @@ namespace Proteins
 
 		void propagate()
 		{	
-			if (hotNodes.Count > 0)
+			//if (hotNodes.Count > 0)
+			//{
+			//	List<int> newlyExcitedNodes = new List<int>();
+			//	var grSys = GetService<GraphSystem>();
+			//	foreach (int hn in hotNodes)
+			//	{
+			//		coldNodes.Add(hn);
+			//		var adjNodes = protGraph.GetAdjacentNodes(hn);
+			//		var adjEdges = protGraph.GetEdges(hn);
+			//		foreach (var ae in adjEdges)
+			//		{
+			//			var interaction = (ProteinInteraction)protGraph.Edges[ae];
+			//			if (interaction.End1 == hn)
+			//			{
+			//				int adjNodeIndex = interaction.End2;
+			//				if (!hotNodes.Contains(adjNodeIndex) && !coldNodes.Contains(adjNodeIndex))
+			//				{
+			//					var nextProtein = (ProteinNode)protGraph.Nodes[adjNodeIndex];
+			//					if (nextProtein.Active)
+			//					{
+			//						newlyExcitedNodes.Add(adjNodeIndex);
+			//					}
+			//				}
+			//			}
+			//		}
+			//	}
+			//	hotNodes.Clear();
+			//	hotNodes = newlyExcitedNodes;
+			//	if (hotNodes.Count > 0)
+			//	{
+			//		grSys.Select(hotNodes);
+			//	}
+			//	else
+			//	{
+			//		coldNodes.Clear();
+			//	}
+			//}
+			List<int> selected = new List<int>();
+			protGraph.Propagate();
+			foreach (ProteinNode prot in protGraph.Nodes)
 			{
-				List<int> newlyExcitedNodes = new List<int>();
-				var grSys = GetService<GraphSystem>();
-				foreach (int hn in hotNodes)
+				if (prot.Signal != SignalType.None)
 				{
-					coldNodes.Add(hn);
-					var adjNodes = protGraph.GetAdjacentNodes(hn);
-					var adjEdges = protGraph.GetEdges(hn);
-					foreach (var ae in adjEdges)
-					{
-						var interaction = (ProteinInteraction)protGraph.Edges[ae];
-						if (interaction.End1 == hn)
-						{
-							int adjNodeIndex = interaction.End2;
-							if (!hotNodes.Contains(adjNodeIndex) && !coldNodes.Contains(adjNodeIndex))
-							{
-								var nextProtein = (ProteinNode)protGraph.Nodes[adjNodeIndex];
-								if (nextProtein.Active)
-								{
-									newlyExcitedNodes.Add(adjNodeIndex);
-								}
-							}
-						}
-					}
-				}
-				hotNodes.Clear();
-				hotNodes = newlyExcitedNodes;
-				if (hotNodes.Count > 0)
-				{
-					grSys.Select(hotNodes);
-				}
-				else
-				{
-					coldNodes.Clear();
+					selected.Add(protGraph.GetIdByName(prot.Name));
 				}
 			}
+			var grSys = GetService<GraphSystem>();
+			grSys.Select(selected);
 		}
 
 		void startPropagate(string name, SignalType signal)
