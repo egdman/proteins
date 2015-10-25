@@ -103,9 +103,66 @@ namespace Proteins
 		}
 
 
+
+		public List<Tuple<ProteinInteraction, int>> GetInteractions(string name)
+		{
+			int id = GetIdByName(name);
+			var edgeIndices = GetEdges(id);
+			List<Tuple<ProteinInteraction, int>> interactions
+				= new List<Tuple<ProteinInteraction, int>>();
+			foreach (int ei in edgeIndices)
+			{
+				interactions.Add(
+					new Tuple<ProteinInteraction, int>
+						((ProteinInteraction)Edges[ei], ei)
+					);
+			}
+			return interactions;
+		}
+
+		public List<Tuple<ProteinInteraction, int>> GetOutcomingInteractions(string name)
+		{
+			var allInteractions = GetInteractions(name);
+			int thisProtId =  GetIdByName(name);
+			List<Tuple<ProteinInteraction, int>> outInteractions 
+				= new List<Tuple<ProteinInteraction,int>>();
+			foreach (var tuple in allInteractions)
+			{
+				if (tuple.Item1.End1 == thisProtId)
+				{
+					outInteractions.Add(tuple);
+				}
+			}
+			return outInteractions;
+		}
+
+
+		public List<Tuple<ProteinInteraction, int>> GetIncomingInteractions(string name)
+		{
+			var allInteractions = GetInteractions(name);
+			int thisProtId = GetIdByName(name);
+			List<Tuple<ProteinInteraction, int>> inInteractions
+				= new List<Tuple<ProteinInteraction, int>>();
+			foreach (var tuple in allInteractions)
+			{
+				if (tuple.Item1.End2 == thisProtId)
+				{
+					inInteractions.Add(tuple);
+				}
+			}
+			return inInteractions;
+		}
+
+
 		public ProteinNode GetProtein(string name)
 		{
 			return (ProteinNode)Nodes[idByName[name]];
+		}
+
+
+		public ProteinNode GetProtein(int index)
+		{
+			return (ProteinNode)Nodes[index];
 		}
 
 
@@ -145,6 +202,46 @@ namespace Proteins
 			}
 			edge.Value = strength;
 			AddEdge(edge);
+		}
+
+
+		public void Propagate()
+		{
+			List<Tuple<int, SignalType>> updatedSignals
+				 = new List<Tuple<int,SignalType>>();
+
+			foreach (ProteinNode prot in Nodes)
+			{
+				if (prot.Active && prot.Signal != SignalType.None)
+				{
+					SignalType signal = prot.Signal;
+					
+
+					var outInteractions = GetOutcomingInteractions(prot.Name);
+					foreach (var tuple in outInteractions)
+					{
+						var outInteraction = tuple.Item1;
+						ProteinNode nextProt = GetProtein(outInteraction.End2);
+						if (outInteraction.Type == "+")
+						{
+
+							updatedSignals.Add(new Tuple<int,SignalType>(outInteraction.End2, signal));
+						}
+						else if(outInteraction.Type == "-")
+						{
+							updatedSignals.Add(new Tuple<int,SignalType>(outInteraction.End2, ProteinNode.FlipSignal(signal)));
+						}
+					}
+				}
+				prot.Signal = SignalType.None;
+			}
+
+
+			// update signals in nodes:
+			foreach (var tuple in updatedSignals)
+			{
+				GetProtein(tuple.Item1).Signal = tuple.Item2;
+			}
 		}
 	}
 }

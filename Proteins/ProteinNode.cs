@@ -13,6 +13,13 @@ using GraphVis;
 
 namespace Proteins
 {
+	public enum SignalType
+	{
+		None,
+		Plus,
+		Minus
+	}
+
 	class ProteinNode : NodeWithText
 	{
 		bool active;
@@ -26,10 +33,27 @@ namespace Proteins
 		}
 
 
+		public string Name
+		{
+			get
+			{
+				return Text;
+			}
+		}
+
+
+		public SignalType Signal
+		{
+			get;
+			set;
+		}
+
+
 		public ProteinNode(string Text, float size, Color color)
 			: base(Text, size, color)
 		{
 			active = true;
+			Signal = SignalType.None;
 		}
 
 		public void Activate()
@@ -40,6 +64,20 @@ namespace Proteins
 		public void Deactivate()
 		{
 			active = false;
+		}
+
+
+		public static SignalType FlipSignal(SignalType signal)
+		{
+			if (signal == SignalType.Plus)
+			{
+				signal = SignalType.Minus;
+			}
+			else if (signal == SignalType.Minus)
+			{
+				signal = SignalType.Plus;
+			}
+			return signal;
 		}
 	}
 }

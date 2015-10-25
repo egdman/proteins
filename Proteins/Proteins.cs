@@ -38,6 +38,7 @@ namespace Proteins
 		int delay2;
 
 		bool YAPNucleus;
+		bool bCATNucleus;
 		/// <summary>
 		/// Proteins constructor
 		/// </summary>
@@ -80,6 +81,7 @@ namespace Proteins
 			delay2 = 5000;
 
 			YAPNucleus = true;
+			bCATNucleus = true;
 
 		}
 
@@ -202,6 +204,18 @@ namespace Proteins
 
 
 			}
+			if (e.Key == Keys.H)
+			{
+				if (bCATNucleus)
+				{
+					decouple("bCAT", "TCF");
+				}
+				else
+				{
+					couple("bCAT", "TCF");
+				}
+				bCATNucleus = !bCATNucleus;
+			}
 			if (e.Key == Keys.G)
 			{
 				if (YAPNucleus)
@@ -213,7 +227,7 @@ namespace Proteins
 					couple("YAP", "TCF");
 				}
 				YAPNucleus = !YAPNucleus;
-
+		
 				
 	//			Graph graph = grSys.GetGraph();
 				
@@ -232,10 +246,10 @@ namespace Proteins
 	//			graph.Edges[8] = edge2;
 	//			pSys.UpdateGraph(graph);
 			}
-//			if (e.Key == Keys.R)
-//			{
-//				propagate();
-//			}
+			if (e.Key == Keys.D1)
+			{
+				startPropagate("PKCa", true);
+			}
 
 
 		}
@@ -271,7 +285,7 @@ namespace Proteins
 
 			if (timer2 > delay2)
 			{
-				startPropagate();
+				startPropagate("YAP", true);
 				timer2 = 0;
 			}
 
@@ -314,13 +328,17 @@ namespace Proteins
 					var adjEdges = protGraph.GetEdges(hn);
 					foreach (var ae in adjEdges)
 					{
-						var interaction = protGraph.Edges[ae];
+						var interaction = (ProteinInteraction)protGraph.Edges[ae];
 						if (interaction.End1 == hn)
 						{
 							int adjNodeIndex = interaction.End2;
 							if (!hotNodes.Contains(adjNodeIndex) && !coldNodes.Contains(adjNodeIndex))
 							{
-								newlyExcitedNodes.Add(adjNodeIndex);
+								var nextProtein = (ProteinNode)protGraph.Nodes[adjNodeIndex];
+								if (nextProtein.Active)
+								{
+									newlyExcitedNodes.Add(adjNodeIndex);
+								}
 							}
 						}
 					}
@@ -338,7 +356,7 @@ namespace Proteins
 			}
 		}
 
-		void startPropagate()
+		void startPropagate(string name, SignalType signal)
 		{
 			var grSys = GetService<GraphSystem>();
 
@@ -348,7 +366,8 @@ namespace Proteins
 			}
 
 //			int startNode = outerNodes[rnd.Next(outerNodes.Length)];
-			int startNode = protGraph.GetIdByName("YAP");
+			int startNode = protGraph.GetIdByName(name);
+			protGraph.GetProtein(startNode).Signal = signal;
 			hotNodes.Add(startNode);
 			grSys.Select(hotNodes);
 		}
