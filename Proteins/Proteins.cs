@@ -25,7 +25,7 @@ namespace Proteins
 		int[] jumpers		= { 8, 12 };
 		int[] outerNodes	= { 0, 1, 2 };
 
-		List<int> hotNodes;
+//		List<int> hotNodes;
 		List<int> coldNodes;
 		ProteinGraph protGraph;
 
@@ -70,7 +70,7 @@ namespace Proteins
 
 			nodeSelected = false;
 			selectedNodeIndex = 0;
-			hotNodes	= new List<int>();
+//			hotNodes	= new List<int>();
 			coldNodes	= new List<int>();
 			protGraph	= new ProteinGraph();
 
@@ -98,6 +98,10 @@ namespace Proteins
 			InputDevice.KeyDown += InputDevice_KeyDown;
 
 			//	load content & create graphics and audio resources here:
+
+			var gs = GetService<GraphSystem>();
+			gs.BackgroundColor = Color.Black;
+			gs.BlendMode = BlendState.Additive;
 
 			protGraph.ReadFromFile("../../../../signalling_table.csv");
 			protGraph.GetProtein("bCAT").Deactivate();
@@ -246,9 +250,17 @@ namespace Proteins
 	//			graph.Edges[8] = edge2;
 	//			pSys.UpdateGraph(graph);
 			}
-			if (e.Key == Keys.D1)
+			if (e.Key == Keys.D2)
 			{
-				startPropagate("PKCa", true);
+				startPropagate("PKCa", SignalType.Plus, "YAP");
+			}
+
+			if (e.Key == Keys.D3)
+			{
+				startPropagate("Ecad", SignalType.Plus, "TCF");
+			}
+			if (e.Key == Keys.D4)
+			{
 			}
 
 
@@ -285,7 +297,7 @@ namespace Proteins
 
 			if (timer2 > delay2)
 			{
-				startPropagate("YAP", true);
+	//			startPropagate("YAP", SignalType.Plus);
 				timer2 = 0;
 			}
 
@@ -317,70 +329,36 @@ namespace Proteins
 
 		void propagate()
 		{	
-			//if (hotNodes.Count > 0)
-			//{
-			//	List<int> newlyExcitedNodes = new List<int>();
-			//	var grSys = GetService<GraphSystem>();
-			//	foreach (int hn in hotNodes)
-			//	{
-			//		coldNodes.Add(hn);
-			//		var adjNodes = protGraph.GetAdjacentNodes(hn);
-			//		var adjEdges = protGraph.GetEdges(hn);
-			//		foreach (var ae in adjEdges)
-			//		{
-			//			var interaction = (ProteinInteraction)protGraph.Edges[ae];
-			//			if (interaction.End1 == hn)
-			//			{
-			//				int adjNodeIndex = interaction.End2;
-			//				if (!hotNodes.Contains(adjNodeIndex) && !coldNodes.Contains(adjNodeIndex))
-			//				{
-			//					var nextProtein = (ProteinNode)protGraph.Nodes[adjNodeIndex];
-			//					if (nextProtein.Active)
-			//					{
-			//						newlyExcitedNodes.Add(adjNodeIndex);
-			//					}
-			//				}
-			//			}
-			//		}
-			//	}
-			//	hotNodes.Clear();
-			//	hotNodes = newlyExcitedNodes;
-			//	if (hotNodes.Count > 0)
-			//	{
-			//		grSys.Select(hotNodes);
-			//	}
-			//	else
-			//	{
-			//		coldNodes.Clear();
-			//	}
-			//}
 			List<int> selected = new List<int>();
 			protGraph.Propagate();
 			foreach (ProteinNode prot in protGraph.Nodes)
 			{
-				if (prot.Signal != SignalType.None)
+				if (prot.Signal == SignalType.Plus || prot.Signal == SignalType.Minus)
 				{
 					selected.Add(protGraph.GetIdByName(prot.Name));
 				}
 			}
 			var grSys = GetService<GraphSystem>();
-			grSys.Select(selected);
+			if (selected.Count > 0)
+			{
+				grSys.Select(selected);
+			}
 		}
 
-		void startPropagate(string name, SignalType signal)
+		void startPropagate(string startName, SignalType signal, string endName)
 		{
+			timer = 0;
 			var grSys = GetService<GraphSystem>();
-
+			protGraph.ResetSignals();
+			grSys.Deselect();
 			if (grSys.NodeCount == 0)
 			{
 				return;
 			}
 
-//			int startNode = outerNodes[rnd.Next(outerNodes.Length)];
-			int startNode = protGraph.GetIdByName(name);
-			protGraph.GetProtein(startNode).Signal = signal;
-			hotNodes.Add(startNode);
-			grSys.Select(hotNodes);
+			protGraph.GetProtein(startName).Signal = signal;
+			protGraph.GetProtein(endName).Signal = SignalType.End;
+			grSys.Select(protGraph.GetIdByName(startName));
 		}
 
 

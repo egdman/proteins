@@ -17,7 +17,8 @@ namespace Proteins
 	{
 		None,
 		Plus,
-		Minus
+		Minus,
+		End
 	}
 
 	class ProteinNode : NodeWithText

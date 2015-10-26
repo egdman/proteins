@@ -194,7 +194,7 @@ namespace GraphVis {
 			HighlightNodeColor	= new Vector4(0, 1, 0, 1);
 			HighlightEdgeColor	= new Vector4(0, 1, 0, 1);
 			BackgroundColor		= Color.White;
-			BlendMode			= BlendState.NegMultiply;
+			BlendMode			= BlendState.Additive;
 			AnchorToNodes		= false;
 		}
 

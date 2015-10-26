@@ -212,7 +212,8 @@ namespace Proteins
 
 			foreach (ProteinNode prot in Nodes)
 			{
-				if (prot.Active && prot.Signal != SignalType.None)
+		//		if (prot.Active && prot.Signal != SignalType.None)
+				if (prot.Signal != SignalType.None && prot.Signal != SignalType.End)
 				{
 					SignalType signal = prot.Signal;
 					
@@ -222,18 +223,21 @@ namespace Proteins
 					{
 						var outInteraction = tuple.Item1;
 						ProteinNode nextProt = GetProtein(outInteraction.End2);
-						if (outInteraction.Type == "+")
+						// if next protein is not a destination:
+						if (nextProt.Signal != SignalType.End)
 						{
-
-							updatedSignals.Add(new Tuple<int,SignalType>(outInteraction.End2, signal));
-						}
-						else if(outInteraction.Type == "-")
-						{
-							updatedSignals.Add(new Tuple<int,SignalType>(outInteraction.End2, ProteinNode.FlipSignal(signal)));
+							if (outInteraction.Type == "+")
+							{
+								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
+							}
+							else if (outInteraction.Type == "-")
+							{
+								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, ProteinNode.FlipSignal(signal)));
+							}
 						}
 					}
 				}
-				prot.Signal = SignalType.None;
+	//			prot.Signal = SignalType.None;
 			}
 
 
@@ -241,6 +245,23 @@ namespace Proteins
 			foreach (var tuple in updatedSignals)
 			{
 				GetProtein(tuple.Item1).Signal = tuple.Item2;
+				if (tuple.Item2 == SignalType.Plus)
+				{
+					GetProtein(tuple.Item1).Activate();
+				}
+				else if (tuple.Item2 == SignalType.Minus)
+				{
+					GetProtein(tuple.Item1).Deactivate();
+				}
+			}
+		}
+
+
+		public void ResetSignals()
+		{
+			foreach (ProteinNode prot in Nodes)
+			{
+				prot.Signal = SignalType.None;
 			}
 		}
 	}
