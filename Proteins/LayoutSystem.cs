@@ -167,6 +167,14 @@ namespace GraphVis
 			set;
 		}
 
+		public bool Paused
+		{
+			get
+			{
+				return RunPause == State.PAUSE;
+			}
+		}
+
 		Ubershader			shader;
 		StateFactory		factory;
 		ConstantBuffer		paramsCB;
@@ -266,10 +274,14 @@ namespace GraphVis
 
 		public void Pause()
 		{
-			if (RunPause == State.RUN) RunPause = State.PAUSE;
-			else RunPause = State.RUN;
+			RunPause = State.PAUSE;
 		}
 
+
+		public void Unpause()
+		{
+			RunPause = State.RUN;
+		}
 
 		public void ResetState()
 		{	

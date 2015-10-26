@@ -105,6 +105,21 @@ namespace Proteins
 
 			protGraph.ReadFromFile("../../../../signalling_table.csv");
 			protGraph.GetProtein("bCAT").Deactivate();
+
+			var graphSys = GetService<GraphSystem>();
+
+			// add categories of nodes with different localization:
+			// category 1 (membrane):
+			graphSys.AddCategory(membrane, new Vector3(0, 0, 0), 700);
+
+			// category 2 (cytoplasm):
+			graphSys.AddCategory(cytoplasm, new Vector3(0, 0, 0), 300);
+
+			// category 3 (nucleus):
+			graphSys.AddCategory(nucleus, new Vector3(0, 0, 0), 100);
+
+			graphSys.AddGraph(protGraph);
+			graphSys.Unpause();
 		}
 
 
@@ -153,20 +168,7 @@ namespace Proteins
 			}
 			if (e.Key == Keys.X)
 			{
-				var graphSys = GetService<GraphSystem>();	
-
-				// add categories of nodes with different localization:
-				// category 1 (membrane):
-				graphSys.AddCategory(membrane, new Vector3(0, 0, 0), 700);
-
-				// category 2 (cytoplasm):
-				graphSys.AddCategory(cytoplasm, new Vector3(0, 0, 0), 300);
-
-				// category 3 (nucleus):
-				graphSys.AddCategory(nucleus, new Vector3(0, 0, 0), 100);
-
-	//			protGraph.Nodes[
-				graphSys.AddGraph(protGraph);
+				
 			}
 			if (e.Key == Keys.P)
 			{
@@ -252,15 +254,25 @@ namespace Proteins
 			}
 			if (e.Key == Keys.D2)
 			{
+				protGraph.ResetSignals();
 				startPropagate("PKCa", SignalType.Plus, "YAP");
 			}
 
 			if (e.Key == Keys.D3)
 			{
-				startPropagate("Ecad", SignalType.Plus, "TCF");
+				protGraph.ResetSignals();
+				startPropagate("Ecad", SignalType.Plus, "YAP");
 			}
 			if (e.Key == Keys.D4)
 			{
+				protGraph.ResetSignals();
+				startPropagate("PKCa", SignalType.Plus, "YAP");
+				startPropagate("Ecad", SignalType.Plus, "YAP");
+			}
+			if (e.Key == Keys.D5)
+			{
+				protGraph.ResetSignals();
+				startPropagate("FZD", SignalType.Plus, "bCAT");
 			}
 
 
@@ -349,7 +361,6 @@ namespace Proteins
 		{
 			timer = 0;
 			var grSys = GetService<GraphSystem>();
-			protGraph.ResetSignals();
 			grSys.Deselect();
 			if (grSys.NodeCount == 0)
 			{
@@ -361,6 +372,8 @@ namespace Proteins
 			grSys.Select(protGraph.GetIdByName(startName));
 		}
 
+
+//		void startPropagate(List<string> startNames, SignalType )
 
 		void couple(string name1, string name2)
 		{

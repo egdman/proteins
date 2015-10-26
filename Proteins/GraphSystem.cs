@@ -160,6 +160,14 @@ namespace GraphVis {
 			set;
 		}
 
+		public bool Paused
+		{
+			get
+			{
+				return lay.Paused;
+			}
+		}
+
 		enum RenderFlags {
 			DRAW			= 0x1,
 			POINT			= 0x1 << 1,
@@ -247,6 +255,11 @@ namespace GraphVis {
 		public void Pause()
 		{
 			lay.Pause();
+		}
+
+		public void Unpause()
+		{
+			lay.Unpause();
 		}
 
 

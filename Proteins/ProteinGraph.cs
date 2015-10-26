@@ -245,6 +245,7 @@ namespace Proteins
 			foreach (var tuple in updatedSignals)
 			{
 				GetProtein(tuple.Item1).Signal = tuple.Item2;
+
 				if (tuple.Item2 == SignalType.Plus)
 				{
 					GetProtein(tuple.Item1).Activate();
