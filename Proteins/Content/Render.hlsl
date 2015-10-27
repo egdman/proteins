@@ -178,7 +178,7 @@ void GSMain( point VSOutput inputPoint[1], inout TriangleStream<GSOutput> output
 #endif // RELATIVE_POS
 
 	float4 color	=	sp.Color;
-	float sz		=	1.0f * Params.nodeScale;
+	float sz		=	0.9f * Params.nodeScale;
 	float4 posV		=	mul( pos, Params.View );
 
 	p0.Position = mul( posV + float4( sz, sz, 0, 0 ) , Params.Projection );		

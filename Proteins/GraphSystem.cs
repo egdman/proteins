@@ -55,6 +55,21 @@ namespace GraphVis {
 			}
 		}
 
+		public float Time
+		{
+			get
+			{
+				return time;
+			}
+		}
+
+	}
+
+
+	struct HighlightParams
+	{
+		public Color color;
+		public int number;
 	}
 
 
@@ -153,6 +168,8 @@ namespace GraphVis {
 		float		particleMass;
 		float		edgeSize;
 
+		List<Tuple<StructuredBuffer, HighlightParams>> highlightNodesList;
+		List<Tuple<StructuredBuffer, HighlightParams>> highlightEdgesList;
 
 		StructuredBuffer	highlightNodesBuffer; // list of indices of highlighted nodes
 		StructuredBuffer	highlightedEdgesBuffer; // list of indices of highlighted edges
@@ -255,6 +272,9 @@ namespace GraphVis {
 			BackgroundColor		= Color.White;
 			BlendMode			= BlendState.Additive;
 			AnchorToNodes		= false;
+
+			highlightNodesList = new List<Tuple<StructuredBuffer, HighlightParams>>();
+			highlightEdgesList = new List<Tuple<StructuredBuffer, HighlightParams>>();
 		}
 
 		public int NodeCount { get { return nodeList.Count; } }
@@ -453,48 +473,95 @@ namespace GraphVis {
 		}
 
 
-		public void Highlight(int nodeIndex)
+		//public void Highlight(int nodeIndex)
+		//{
+		//	Highlight( new int[1] {nodeIndex} );
+		//}
+
+
+		//public void Highlight(ICollection<int> nodeIndices)
+		//{
+		//	if (highlightNodesBuffer != null)
+		//	{
+		//		highlightNodesBuffer.Dispose();
+		//	}
+		//	if (highlightedEdgesBuffer != null)
+		//	{
+		//		highlightedEdgesBuffer.Dispose();
+		//	}
+		//	List<int> selEdges = new List<int>(); 
+		//	foreach (var ind in nodeIndices)
+		//	{
+		//		foreach (var l in edgeIndexLists[ind])
+		//		{
+		//			selEdges.Add(l);
+		//		}
+		//	}
+		//	highlightNodesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), nodeIndices.Count, StructuredBufferFlags.Counter);
+		//	highlightedEdgesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), selEdges.Count, StructuredBufferFlags.Counter);
+		//	highlightNodesBuffer.SetData(nodeIndices.ToArray());
+		//	highlightedEdgesBuffer.SetData(selEdges.ToArray());
+		//	numHighlightNodes = nodeIndices.Count;
+		//	numHighlightEdges = selEdges.Count;
+		//}
+
+
+		//public void Dehighlight()
+		//{
+		//	numHighlightNodes = 0;
+		//	numHighlightEdges = 0;
+		//}
+
+
+		public void HighlightNodes(int nodeIndex, Color color)
 		{
-			Highlight( new int[1] {nodeIndex} );
+			HighlightNodes(new int[1] { nodeIndex }, color);
 		}
 
 
-		public void Highlight(ICollection<int> nodeIndices)
+		public void HighlightNodes(ICollection<int> nodeIndices, Color color)
 		{
-			if (highlightNodesBuffer != null)
+			if (!(nodeIndices.Count > 0))
 			{
-				highlightNodesBuffer.Dispose();
+				return;
 			}
-			if (highlightedEdgesBuffer != null)
+			StructuredBuffer buf = new StructuredBuffer(
+				Game.GraphicsDevice,
+				typeof(int),
+				nodeIndices.Count,
+				StructuredBufferFlags.Counter
+			);
+
+			HighlightParams hParam = new HighlightParams{ color = color, number = nodeIndices.Count };
+			buf.SetData(nodeIndices.ToArray());
+			highlightNodesList.Add( new Tuple<StructuredBuffer,HighlightParams>
+				(buf, hParam)
+			);	
+		}
+
+
+		public void DehighlightNodes()
+		{
+			for (int i = 0; i < highlightNodesList.Count; ++i)
 			{
-				highlightedEdgesBuffer.Dispose();
-			}
-			List<int> selEdges = new List<int>(); 
-			foreach (var ind in nodeIndices)
-			{
-				foreach (var l in edgeIndexLists[ind])
+				var buf =  highlightNodesList[i];
+				if (buf.Item1 != null)
 				{
-					selEdges.Add(l);
+					buf.Item1.Dispose();
 				}
 			}
-			highlightNodesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), nodeIndices.Count, StructuredBufferFlags.Counter);
-			highlightedEdgesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), selEdges.Count, StructuredBufferFlags.Counter);
-			highlightNodesBuffer.SetData(nodeIndices.ToArray());
-			highlightedEdgesBuffer.SetData(selEdges.ToArray());
-			numHighlightNodes = nodeIndices.Count;
-			numHighlightEdges = selEdges.Count;
-		}
-
-		public void Deselect()
-		{
-			numHighlightNodes = 0;
-			numHighlightEdges = 0;
+			highlightNodesList.Clear();
 		}
 
 
-		public void Focus(int nodeIndex)
+		public void Focus(int nodeIndex, GreatCircleCamera camera)
 		{
 			referenceNodeIndex = nodeIndex;
+			if (!AnchorToNodes)
+			{
+				var graph = GetGraph();
+				camera.CenterOfOrbit = ((SpatialNode)graph.Nodes[nodeIndex]).Position;
+			}
 		}
 
 
@@ -694,6 +761,7 @@ namespace GraphVis {
 			{
 				highlightedEdgesBuffer.Dispose();
 			}
+			DehighlightNodes();
 		}
 
 		/// <summary>
@@ -735,7 +803,7 @@ namespace GraphVis {
 			param.Projection	= cam.GetProjectionMatrix(stereoEye);
 			param.SelectedNode	= referenceNodeIndex;
 
-			render( device, lay, param );
+			render( device, lay, param, gameTime );
 			
 			// Debug output: ------------------------------------------------------------
 //			var debStr = Game.GetService<DebugStrings>();
@@ -746,7 +814,7 @@ namespace GraphVis {
 		}
 
 
-		void render( GraphicsDevice device, LayoutSystem ls, Params parameters )
+		void render(GraphicsDevice device, LayoutSystem ls, Params parameters, GameTime gameTime)
 		{
 			parameters.MaxParticles	= lay.ParticleCount;
 			parameters.edgeOpacity	= Config.EdgeOpacity;
@@ -781,17 +849,23 @@ namespace GraphVis {
 			device.GeometryShaderResources	[3] = ls.LinksBuffer;
 			device.Draw( edgeList.Count, 0 );
 
-			// draw selected points: ---------------------------------------------------------------
+			// draw highlighted points: ---------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.SELECTION|anchorFlag];
-//			device.PixelShaderResources		[1] = selectionTex;
 			device.PixelShaderResources		[0] = highlightTex;
-			device.GeometryShaderResources	[4] = highlightNodesBuffer;
-			device.Draw(numHighlightNodes, 0);
 
-			// draw selected lines: ----------------------------------------------------------------
+			foreach (var high in highlightNodesList)
+			{
+				device.GeometryShaderResources[4] = high.Item1;
+				parameters.highNodeColor = high.Item2.color.ToVector4();
+				paramsCB.SetData(parameters);
+				int num = high.Item2.number;
+				device.Draw(num, 0);
+			}
+
+			// draw highlighted lines: ----------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.HIGH_LINE|anchorFlag];
 			device.GeometryShaderResources	[5] = highlightedEdgesBuffer;
-			device.Draw(numHighlightEdges, 0);
+	//		device.Draw(highlightedEdgesBuffer.GetStructureCount(), 0);
 
 			// draw sparks: ------------------------------------------------------------------------
 
@@ -799,7 +873,7 @@ namespace GraphVis {
 			foreach (var sp in sparkList)
 			{
 				Spark updSp = sp;
-				updSp.Parameter = sp.Parameter + 0.05f;
+				updSp.Parameter = sp.Parameter + gameTime.Elapsed.Milliseconds / sp.Time;
 				if (updSp.Parameter < 1.0f)
 				{
 					updSparks.Add(updSp);

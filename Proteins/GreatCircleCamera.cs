@@ -14,7 +14,7 @@ using Fusion.Mathematics;
 
 namespace GraphVis
 {
-	class GreatCircleCamera : Camera
+	public class GreatCircleCamera : Camera
 	{
 		Vector3 radial;  // points at camera from the center
 		Vector3 centerAbs; // global position of the center

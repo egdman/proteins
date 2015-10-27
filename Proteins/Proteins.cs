@@ -29,6 +29,10 @@ namespace Proteins
 		List<int> coldNodes;
 		ProteinGraph protGraph;
 
+
+		Color nodeHighlightColorPos;
+		Color nodeHighlightColorNeg;
+
 		Random rnd = new Random();
 
 		int timer;
@@ -83,6 +87,10 @@ namespace Proteins
 			YAPNucleus = true;
 			bCATNucleus = true;
 
+
+			nodeHighlightColorNeg = Color.Red;
+			nodeHighlightColorPos = Color.Green;
+
 		}
 
 
@@ -105,6 +113,8 @@ namespace Proteins
 
 			protGraph.ReadFromFile("../../../../signalling_table.csv");
 			protGraph.GetProtein("bCAT").Deactivate();
+			protGraph.HighlightNodesColorPos = nodeHighlightColorPos;
+			protGraph.HighlightNodesColorNeg = nodeHighlightColorNeg;
 
 			var graphSys = GetService<GraphSystem>();
 
@@ -170,9 +180,11 @@ namespace Proteins
 			{
 				
 			}
-			if (e.Key == Keys.P)
+			if (e.Key == Keys.P) // pause/unpause
 			{
-				GetService<GraphSystem>().Pause();
+				var gs = GetService<GraphSystem>();
+				if (gs.Paused) gs.Unpause();
+				else gs.Pause();
 			}
 
 			if (e.Key == Keys.F) // focus on a node
@@ -181,7 +193,7 @@ namespace Proteins
 				var pSys = GetService<GraphSystem>();
 				if (nodeSelected)
 				{
-					pSys.Focus(selectedNodeIndex);
+					pSys.Focus(selectedNodeIndex, cam);
 				}
 			}
 
@@ -193,64 +205,35 @@ namespace Proteins
 				if (nodeSelected = pSys.ClickNode(cursor, StereoEye.Mono, 0.025f, out selNode))
 				{
 					selectedNodeIndex = selNode;
-					var adjEdges = protGraph.GetEdges(selNode);
+					var protein		= protGraph.GetProtein(selectedNodeIndex);
+					var inEdges		= protGraph.GetIncomingInteractions(protein.Name);
+					var outEdges	= protGraph.GetOutcomingInteractions(protein.Name);
+
 					string protName = ((NodeWithText)protGraph.Nodes[selNode]).Text;
 					Console.WriteLine("id = " + selNode +
-						" name: " + protName + ":  ");
-					foreach (var ae in adjEdges)
+						" name: " + protein.Name + ":  ");
+					Console.WriteLine("incoming:");
+					foreach (var ie in inEdges)
 					{
-						var interaction = protGraph.Edges[ae];
-						if (interaction.End1 == selNode)
-						{
-							Console.WriteLine(protGraph.Edges[ae].GetInfo());
-						}
+						Console.WriteLine(ie.Item1.GetInfo());
+					}
+
+					Console.WriteLine("outcoming:");
+					foreach (var oe in outEdges)
+					{
+						Console.WriteLine(oe.Item1.GetInfo());
 					}
 					Console.WriteLine();
 				}
-
-
 			}
-			if (e.Key == Keys.H)
+			if (e.Key == Keys.R)
 			{
-				if (bCATNucleus)
-				{
-					decouple("bCAT", "TCF");
-				}
-				else
-				{
-					couple("bCAT", "TCF");
-				}
-				bCATNucleus = !bCATNucleus;
+				protGraph.ResetSignals();
 			}
-			if (e.Key == Keys.G)
+			if (e.Key == Keys.D1)
 			{
-				if (YAPNucleus)
-				{
-					decouple("YAP", "TCF");
-				}
-				else
-				{
-					couple("YAP", "TCF");
-				}
-				YAPNucleus = !YAPNucleus;
-		
-				
-	//			Graph graph = grSys.GetGraph();
-				
-
-//				pSys.Select(startNode);
-//				int edgeIndex = graph.GetEdgeIndex(8, 13);
-				
-
-	//			Graph.Edge edge1 = graph.Edges[13];
-	//			Graph.Edge edge2 = graph.Edges[8];
-	//			float tmp = edge1.Value;
-	//			edge1.Value = edge2.Value;
-	//			edge2.Value = tmp;
-
-	//			graph.Edges[13] = edge1;
-	//			graph.Edges[8] = edge2;
-	//			pSys.UpdateGraph(graph);
+				protGraph.ResetSignals();
+				startPropagate("PKCa", SignalType.Plus, "TCF");
 			}
 			if (e.Key == Keys.D2)
 			{
@@ -353,27 +336,14 @@ namespace Proteins
 		void propagate()
 		{
 			var grSys = GetService<GraphSystem>();
-			List<int> selected = new List<int>();
 			protGraph.Propagate(grSys, delay);
-			foreach (ProteinNode prot in protGraph.Nodes)
-			{
-				if (prot.Signal == SignalType.Plus || prot.Signal == SignalType.Minus || prot.Signal == SignalType.End)
-				{
-					selected.Add(protGraph.GetIdByName(prot.Name));
-				}
-			}
-			
-			if (selected.Count > 0)
-			{
-				grSys.Highlight(selected);
-			}
 		}
 
 		void startPropagate(string startName, SignalType signal, string endName)
 		{
 			timer = 0;
 			var grSys = GetService<GraphSystem>();
-			grSys.Deselect();
+			grSys.DehighlightNodes();
 			if (grSys.NodeCount == 0)
 			{
 				return;
@@ -381,44 +351,12 @@ namespace Proteins
 
 			protGraph.GetProtein(startName).Signal = signal;
 			protGraph.GetProtein(endName).Signal = SignalType.End;
-			grSys.Select(protGraph.GetIdByName(startName));
+			grSys.HighlightNodes(protGraph.GetIdByName(startName), nodeHighlightColorPos);
 		}
 
 
 //		void startPropagate(List<string> startNames, SignalType )
 
-		void couple(string name1, string name2)
-		{
-			changeEdgeValue(name1, name2, 5.0f);
-		}
-
-
-		void decouple(string name1, string name2)
-		{
-			changeEdgeValue(name1, name2, 0.5f);
-		}
-
-
-		void changeEdgeValue(string name1, string name2, float value)
-		{
-			var grSys = GetService<GraphSystem>();
-			int id1 = protGraph.GetIdByName(name1);
-			int id2 = protGraph.GetIdByName(name2);
-			List<Tuple<ProteinInteraction, int>> interactions = 
-				protGraph.GetInteractions(name1, name2);
-
-			var graph = grSys.GetGraph();
-			foreach (var inter in interactions)
-			{
-				int index = inter.Item2;
-				var interaction = inter.Item1;
-				if (interaction.Type == "b")
-				{
-					graph.Edges[index].Value = value;
-					
-				}
-			}
-			grSys.UpdateGraph(graph);
-		}
+		
 	}
 }

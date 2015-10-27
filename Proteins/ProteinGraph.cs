@@ -25,6 +25,8 @@ namespace Proteins
 		}
 		Dictionary<string, int> idByName;
 
+		public Color HighlightNodesColorPos { get; set; }
+		public Color HighlightNodesColorNeg { get; set; }
 
 		public int GetIdByName(string name)
 		{
@@ -36,6 +38,9 @@ namespace Proteins
 		public ProteinGraph() : base()
 		{
 			idByName = new Dictionary<string, int>();
+			HighlightNodesColorPos = 
+				HighlightNodesColorNeg = 
+				Color.White;
 		}
 
 		public override void ReadFromFile(string path)
@@ -209,50 +214,88 @@ namespace Proteins
 		{
 			List<Tuple<int, SignalType>> updatedSignals
 				 = new List<Tuple<int,SignalType>>();
+			graphSystem.DehighlightNodes();
 
 			foreach (ProteinNode prot in Nodes)
 			{
-				if (prot.Signal != SignalType.None && prot.Signal != SignalType.End)
+				if (prot.Signal != SignalType.None)
 				{
 					SignalType signal = prot.Signal;
-					
 
-					var outInteractions = GetOutcomingInteractions(prot.Name);
-					foreach (var tuple in outInteractions)
+					var inInteractions = GetIncomingInteractions(prot.Name);
+					foreach (var tuple in inInteractions)
 					{
-						var outInteraction = tuple.Item1;
-						ProteinNode nextProt = GetProtein(outInteraction.End2);
-						
-						if (outInteraction.Type == "-")
+						var inInteraction = tuple.Item1;
+						ProteinNode prevProt = GetProtein(inInteraction.End1);
+						if (inInteraction.Type == "b" &&
+							(prevProt.Signal == SignalType.Plus || prevProt.Signal == SignalType.Minus))
 						{
-							signal = ProteinNode.FlipSignal(signal);
+							decouple(prot.Name, prevProt.Name, graphSystem);
 						}
 
-						if (signal == SignalType.Plus)
-						{
-							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Green); 
-						}
-						else if (signal == SignalType.Minus)
-						{
-							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Red); 
-						}
+					}
 
-						// if next protein is not a destination:
-						if (nextProt.Signal != SignalType.End)
+					// if this is not the end of chain, transmit signal further:
+					if (prot.Signal != SignalType.End)
+					{
+						var outInteractions = GetOutcomingInteractions(prot.Name);
+						foreach (var tuple in outInteractions)
 						{
-							updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
+							var outInteraction = tuple.Item1;
+							ProteinNode nextProt = GetProtein(outInteraction.End2);
+
+							if (outInteraction.Type == "-")
+							{
+								signal = ProteinNode.FlipSignal(signal);
+							}
+
+							if (outInteraction.Type == "b")
+							{
+								couple(prot.Name, nextProt.Name, graphSystem);
+							}
+
+							if (signal == SignalType.Plus)
+							{
+								graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Green);
+							}
+							else if (signal == SignalType.Minus)
+							{
+								graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Red);
+							}
+
+							// if next protein is not a destination:
+							if (nextProt.Signal != SignalType.End)
+							{
+								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
+							}
 						}
 					}
 				}
-				graphSystem.RefreshSparks();
-
+				if (prot.Signal == SignalType.End)
+				{
+					graphSystem.HighlightNodes(GetIdByName(prot.Name), Color.White);
+				}
+				else
+				{
+					prot.Signal = SignalType.None;
+				}
 			}
-
+			graphSystem.RefreshSparks();
+			List<int> highlightNodesPos = new List<int>();
+			List<int> highlightNodesNeg = new List<int>();
 
 			// update signals in nodes:
 			foreach (var tuple in updatedSignals)
 			{
 				GetProtein(tuple.Item1).Signal = tuple.Item2;
+				if (tuple.Item2 == SignalType.Plus)
+				{
+					highlightNodesPos.Add(tuple.Item1);
+				}
+				else if (tuple.Item2 == SignalType.Minus)
+				{
+					highlightNodesNeg.Add(tuple.Item1);
+				}
 
 				if (tuple.Item2 == SignalType.Plus)
 				{
@@ -263,6 +306,10 @@ namespace Proteins
 					GetProtein(tuple.Item1).Deactivate();
 				}
 			}
+
+			
+			graphSystem.HighlightNodes(highlightNodesPos, HighlightNodesColorPos);
+			graphSystem.HighlightNodes(highlightNodesNeg, HighlightNodesColorNeg);
 		}
 
 
@@ -272,6 +319,37 @@ namespace Proteins
 			{
 				prot.Signal = SignalType.None;
 			}
+		}
+
+
+
+		void couple(string name1, string name2, GraphSystem graphSystem)
+		{
+			changeEdgeValue(name1, name2, 5.0f, graphSystem);
+		}
+
+
+		void decouple(string name1, string name2, GraphSystem graphSystem)
+		{
+			changeEdgeValue(name1, name2, 0.5f, graphSystem);
+		}
+
+
+		void changeEdgeValue(string name1, string name2, float value, GraphSystem graphSystem)
+		{
+
+			int id1 = GetIdByName(name1);
+			int id2 = GetIdByName(name2);
+			List<Tuple<ProteinInteraction, int>> interactions =	GetInteractions(name1, name2);
+
+			var graph = graphSystem.GetGraph();
+			foreach (var inter in interactions)
+			{
+				int index = inter.Item2;
+				var interaction = inter.Item1;
+				graph.Edges[index].Value = value;
+			}
+			graphSystem.UpdateGraph(graph);
 		}
 	}
 }
