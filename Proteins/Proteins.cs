@@ -230,6 +230,12 @@ namespace Proteins
 			{
 				protGraph.ResetSignals();
 			}
+			if (e.Key == Keys.Q)
+			{
+				Graph graph = GetService<GraphSystem>().GetGraph();
+				graph.WriteToFile("../../../../graph.gr");
+				Log.Message("Graph saved to file");
+			}
 			if (e.Key == Keys.D1)
 			{
 				protGraph.ResetSignals();

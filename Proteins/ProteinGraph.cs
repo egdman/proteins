@@ -43,6 +43,13 @@ namespace Proteins
 				Color.White;
 		}
 
+
+		public void ReadLayoutFromFile(string path)
+		{
+			var lines = File.ReadAllLines(path);
+		}
+
+
 		public override void ReadFromFile(string path)
 		{
 			var lines = File.ReadAllLines(path);
@@ -199,7 +206,7 @@ namespace Proteins
 			}
 			else if (interType[0] == 'b')
 			{
-				strength = 5.0f;
+				strength = 0.5f;
 			}
 			else
 			{
@@ -221,19 +228,6 @@ namespace Proteins
 				if (prot.Signal != SignalType.None)
 				{
 					SignalType signal = prot.Signal;
-
-					var inInteractions = GetIncomingInteractions(prot.Name);
-					foreach (var tuple in inInteractions)
-					{
-						var inInteraction = tuple.Item1;
-						ProteinNode prevProt = GetProtein(inInteraction.End1);
-						if (inInteraction.Type == "b" &&
-							(prevProt.Signal == SignalType.Plus || prevProt.Signal == SignalType.Minus))
-						{
-							decouple(prot.Name, prevProt.Name, graphSystem);
-						}
-
-					}
 
 					// if this is not the end of chain, transmit signal further:
 					if (prot.Signal != SignalType.End)
@@ -268,6 +262,10 @@ namespace Proteins
 							{
 								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
 							}
+							else
+							{
+								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, SignalType.End));
+							}
 						}
 					}
 				}
@@ -280,9 +278,18 @@ namespace Proteins
 					prot.Signal = SignalType.None;
 				}
 			}
+
+
 			graphSystem.RefreshSparks();
 			List<int> highlightNodesPos = new List<int>();
 			List<int> highlightNodesNeg = new List<int>();
+
+
+			if (updatedSignals.Count == 0)
+			{
+				ResetSignals();
+				decoupleEverything(graphSystem);
+			}
 
 			// update signals in nodes:
 			foreach (var tuple in updatedSignals)
@@ -306,7 +313,6 @@ namespace Proteins
 					GetProtein(tuple.Item1).Deactivate();
 				}
 			}
-
 			
 			graphSystem.HighlightNodes(highlightNodesPos, HighlightNodesColorPos);
 			graphSystem.HighlightNodes(highlightNodesNeg, HighlightNodesColorNeg);
@@ -321,8 +327,7 @@ namespace Proteins
 			}
 		}
 
-
-
+		
 		void couple(string name1, string name2, GraphSystem graphSystem)
 		{
 			changeEdgeValue(name1, name2, 5.0f, graphSystem);
@@ -337,9 +342,6 @@ namespace Proteins
 
 		void changeEdgeValue(string name1, string name2, float value, GraphSystem graphSystem)
 		{
-
-			int id1 = GetIdByName(name1);
-			int id2 = GetIdByName(name2);
 			List<Tuple<ProteinInteraction, int>> interactions =	GetInteractions(name1, name2);
 
 			var graph = graphSystem.GetGraph();
@@ -348,6 +350,16 @@ namespace Proteins
 				int index = inter.Item2;
 				var interaction = inter.Item1;
 				graph.Edges[index].Value = value;
+			}
+			graphSystem.UpdateGraph(graph);
+		}
+
+		void decoupleEverything(GraphSystem graphSystem)
+		{
+			var graph = graphSystem.GetGraph();
+			foreach (var e in graph.Edges)
+			{
+				e.Value = 0.5f;
 			}
 			graphSystem.UpdateGraph(graph);
 		}
