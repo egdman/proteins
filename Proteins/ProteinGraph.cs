@@ -205,14 +205,13 @@ namespace Proteins
 		}
 
 
-		public void Propagate()
+		public void Propagate(GraphSystem graphSystem, float time)
 		{
 			List<Tuple<int, SignalType>> updatedSignals
 				 = new List<Tuple<int,SignalType>>();
 
 			foreach (ProteinNode prot in Nodes)
 			{
-		//		if (prot.Active && prot.Signal != SignalType.None)
 				if (prot.Signal != SignalType.None && prot.Signal != SignalType.End)
 				{
 					SignalType signal = prot.Signal;
@@ -223,21 +222,30 @@ namespace Proteins
 					{
 						var outInteraction = tuple.Item1;
 						ProteinNode nextProt = GetProtein(outInteraction.End2);
+						
+						if (outInteraction.Type == "-")
+						{
+							signal = ProteinNode.FlipSignal(signal);
+						}
+
+						if (signal == SignalType.Plus)
+						{
+							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Green); 
+						}
+						else if (signal == SignalType.Minus)
+						{
+							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Red); 
+						}
+
 						// if next protein is not a destination:
 						if (nextProt.Signal != SignalType.End)
 						{
-							if (outInteraction.Type == "+")
-							{
-								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
-							}
-							else if (outInteraction.Type == "-")
-							{
-								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, ProteinNode.FlipSignal(signal)));
-							}
+							updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
 						}
 					}
 				}
-	//			prot.Signal = SignalType.None;
+				graphSystem.RefreshSparks();
+
 			}
 
 

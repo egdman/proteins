@@ -1,5 +1,5 @@
 #if 0
-$ubershader	DRAW POINT|LINE|SELECTION|HIGH_LINE ABSOLUTE_POS|RELATIVE_POS
+$ubershader	DRAW POINT|LINE|SELECTION|HIGH_LINE|SPARKS ABSOLUTE_POS|RELATIVE_POS
 #endif
 
 struct PARAMS {
@@ -33,6 +33,15 @@ struct PARTICLE3D {
 };
 
 
+struct Spark {
+	int		Start;
+	int		End;
+	float	Time;
+	float	Parameter;
+	float4	Color;
+};
+
+
 struct LinkId {
 	int id;
 };
@@ -51,6 +60,7 @@ StructuredBuffer<PARTICLE3D>	particleReadBuffer	:	register(t2);
 StructuredBuffer<Link>			linksBuffer			:	register(t3);
 StructuredBuffer<int>			SelectedNodeIndices	:	register(t4);
 StructuredBuffer<int>			SelectedLinkIndices	:	register(t5);
+StructuredBuffer<Spark>			SparkBuffer			:	register(t6);
 
 
 #ifdef DRAW
@@ -146,6 +156,64 @@ void GSMain( point VSOutput inputPoint[1], inout TriangleStream<GSOutput> output
 }
 
 #endif // POINT
+
+
+
+#ifdef SPARKS
+[maxvertexcount(6)]
+void GSMain( point VSOutput inputPoint[1], inout TriangleStream<GSOutput> outputStream )
+{
+	GSOutput p0, p1, p2, p3;
+	Spark sp = SparkBuffer[inputPoint[0].vertexID];
+
+	float4 startPos	= float4(particleReadBuffer[sp.Start].Position, 1);
+	float4 endPos	= float4(particleReadBuffer[sp.End  ].Position, 1);
+	float4 refPos	= float4(particleReadBuffer[ Params.SelectedParticle ].Position, 1);
+	
+	float4 pos = startPos + (endPos - startPos)*sp.Parameter;
+
+	// Draw with reference to a selected particle:
+#ifdef RELATIVE_POS
+	pos -= refPos;
+#endif // RELATIVE_POS
+
+	float4 color	=	sp.Color;
+	float sz		=	1.0f * Params.nodeScale;
+	float4 posV		=	mul( pos, Params.View );
+
+	p0.Position = mul( posV + float4( sz, sz, 0, 0 ) , Params.Projection );		
+	p0.TexCoord = float2(1,1);
+	p0.Color = color;
+
+	p1.Position = mul( posV + float4(-sz, sz, 0, 0 ) , Params.Projection );
+	p1.TexCoord = float2(0,1);
+	p1.Color = color;
+
+	p2.Position = mul( posV + float4(-sz,-sz, 0, 0 ) , Params.Projection );
+	p2.TexCoord = float2(0,0);
+	p2.Color = color;
+
+	p3.Position = mul( posV + float4( sz,-sz, 0, 0 ) , Params.Projection );
+	p3.TexCoord = float2(1,0);
+	p3.Color = color;
+
+	outputStream.Append(p0);
+	outputStream.Append(p1);
+	outputStream.Append(p2);
+	outputStream.RestartStrip();
+	outputStream.Append(p0);
+	outputStream.Append(p2);
+	outputStream.Append(p3);
+	outputStream.RestartStrip();
+
+
+}
+#endif // SPARKS
+
+
+
+
+
 
 
 #ifdef LINE
@@ -305,9 +373,6 @@ void GSMain( point VSOutput inputLine[1], inout LineStream<GSOutput> outputStrea
 
 }
 
-
-
-
 #endif // HIGH_LINE
 
 
@@ -320,20 +385,20 @@ float4 PSMain( GSOutput input ) : SV_Target
 
 
 
-#ifdef POINT
+#if defined (POINT) || defined (SPARKS) || defined(SELECTION)
 float4 PSMain( GSOutput input ) : SV_Target
 {
 	return Texture.Sample( Sampler, input.TexCoord ) * float4(input.Color.rgb,1);
 }
-#endif // POINT
+#endif // POINT or SPARK or SELECTION
 
 
-#ifdef SELECTION
-float4 PSMain( GSOutput input ) : SV_Target
-{
-	return SelectionTexture.Sample( Sampler, input.TexCoord ) * float4(input.Color.rgb,1);
-}
-#endif // SELECTION
+//#ifdef SELECTION
+//float4 PSMain( GSOutput input ) : SV_Target
+//{
+//	return SelectionTexture.Sample( Sampler, input.TexCoord ) * float4(input.Color.rgb,1);
+//}
+//#endif // SELECTION
 
 
 #endif //DRAW

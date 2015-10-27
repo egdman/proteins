@@ -13,6 +13,51 @@ using Fusion.Mathematics;
 using Fusion.Input;
 
 namespace GraphVis {
+
+	[StructLayout(LayoutKind.Explicit, Size=32)]
+	public struct Spark
+	{
+		[FieldOffset(0)]
+		int start;
+
+		[FieldOffset(4)]
+		int end;
+
+		[FieldOffset(8)]
+		float time;
+
+		[FieldOffset(12)]
+		float parameter;
+
+		[FieldOffset(16)]
+		public Vector4 Color;
+
+		public Spark(Texture2D Texture, int From, int To, float Time, Color color)
+		{
+			start = From;
+			end = To;
+			time = Time;
+			parameter = 0.0f;
+			Color = color.ToVector4();
+		}
+
+		public float Parameter
+		{
+			get
+			{
+				return parameter;
+			}
+			set
+			{
+				if (value > 1.0f) parameter = 1.0f;
+				else if (value < 0.0f) parameter = 0.0f;
+				else parameter = value;
+			}
+		}
+
+	}
+
+
 	public class ParticleConfig
 	{
 		[Category("General")]
@@ -99,7 +144,8 @@ namespace GraphVis {
 //		public const float WorldSize = 50.0f;
 
 		Texture2D		particleTex;
-		Texture2D		selectionTex;
+		Texture2D		highlightTex;
+		Texture2D		sparkTex;
 		Ubershader		renderShader;
 		Ubershader		computeShader;
 		StateFactory	factory;
@@ -108,8 +154,10 @@ namespace GraphVis {
 		float		edgeSize;
 
 
-		StructuredBuffer	selectedNodesBuffer; // list of indices of highlighted nodes
-		StructuredBuffer	selectedEdgesBuffer; // list of indices of highlighted edges
+		StructuredBuffer	highlightNodesBuffer; // list of indices of highlighted nodes
+		StructuredBuffer	highlightedEdgesBuffer; // list of indices of highlighted edges
+
+		StructuredBuffer	sparkBuffer;
 
 		ConstantBuffer		paramsCB;
 
@@ -117,13 +165,15 @@ namespace GraphVis {
 		List<Link>			edgeList;
 		List<Particle3d>	nodeList;
 
+		List<Spark>			sparkList;
+
 		Queue<int>			commandQueue;
 		Random				rand = new Random();
 
 		LayoutSystem		lay;
 
-		int		numSelectedNodes;
-		int		numSelectedEdges;
+		int		numHighlightNodes;
+		int		numHighlightEdges;
 		int		referenceNodeIndex;
 
 
@@ -177,6 +227,7 @@ namespace GraphVis {
 
 			ABSOLUTE_POS	= 0x1 << 5,
 			RELATIVE_POS	= 0x1 << 6,
+			SPARKS			= 0x1 << 7,
 		}
 
 
@@ -210,6 +261,7 @@ namespace GraphVis {
 		public int EdgeCount { get { return edgeList.Count; } }
 
 
+
 		
 		/// <summary>
 		/// 
@@ -217,7 +269,8 @@ namespace GraphVis {
 		public override void Initialize ()
 		{
 			particleTex		=	Game.Content.Load<Texture2D>("smaller");
-			selectionTex	=	Game.Content.Load<Texture2D>("selection");
+			highlightTex	=	Game.Content.Load<Texture2D>("selection");
+			sparkTex		=	Game.Content.Load<Texture2D>("spark");
 			renderShader	=	Game.Content.Load<Ubershader>("Render");
 			computeShader	=	Game.Content.Load<Ubershader>("Compute");
 
@@ -237,13 +290,15 @@ namespace GraphVis {
 			paramsCB			=	new ConstantBuffer( Game.GraphicsDevice, typeof(Params) );
 			particleMass		=	1.0f;
 			edgeSize			=	1000.0f;
+
 			edgeList			=	new List<Link>();
-			nodeList		=	new List<Particle3d>();
-			edgeIndexLists		=	new List<List<int> >();
+			nodeList			=	new List<Particle3d>();
+			edgeIndexLists		=	new List<List<int>>();
+			sparkList			=	new List<Spark>();
 			commandQueue		=	new Queue<int>();
 
-			numSelectedNodes	=	0;
-			numSelectedEdges	=	0;
+			numHighlightNodes	=	0;
+			numHighlightEdges	=	0;
 			referenceNodeIndex	=	0;
 
 			Game.InputDevice.KeyDown += keyboardHandler;
@@ -360,23 +415,59 @@ namespace GraphVis {
 		}
 
 
-
-
-		public void Select(int nodeIndex)
+		public void AddSpark(int From, int To, float Time, Color color)
 		{
-			Select( new int[1] {nodeIndex} );
+			sparkList.Add(new Spark(sparkTex, From, To, Time, color));
 		}
 
 
-		public void Select(ICollection<int> nodeIndices)
+		public void RefreshSparks()
 		{
-			if (selectedNodesBuffer != null)
+			if (sparkBuffer != null)
 			{
-				selectedNodesBuffer.Dispose();
+				sparkBuffer.Dispose();
+				sparkBuffer = null;
 			}
-			if (selectedEdgesBuffer != null)
+			if (sparkList.Count > 0)
 			{
-				selectedEdgesBuffer.Dispose();
+				sparkBuffer = new StructuredBuffer(
+					Game.GraphicsDevice,
+					typeof(Spark),
+					sparkList.Count,
+					StructuredBufferFlags.Counter
+					);
+				sparkBuffer.SetData(sparkList.ToArray());
+			}
+		}
+
+
+
+		public void RemoveAllSparks()
+		{
+			sparkList.Clear();
+			if (sparkBuffer != null)
+			{
+				sparkBuffer.Dispose();
+				sparkBuffer = null;
+			}
+		}
+
+
+		public void Highlight(int nodeIndex)
+		{
+			Highlight( new int[1] {nodeIndex} );
+		}
+
+
+		public void Highlight(ICollection<int> nodeIndices)
+		{
+			if (highlightNodesBuffer != null)
+			{
+				highlightNodesBuffer.Dispose();
+			}
+			if (highlightedEdgesBuffer != null)
+			{
+				highlightedEdgesBuffer.Dispose();
 			}
 			List<int> selEdges = new List<int>(); 
 			foreach (var ind in nodeIndices)
@@ -386,18 +477,18 @@ namespace GraphVis {
 					selEdges.Add(l);
 				}
 			}
-			selectedNodesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), nodeIndices.Count, StructuredBufferFlags.Counter);
-			selectedEdgesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), selEdges.Count, StructuredBufferFlags.Counter);
-			selectedNodesBuffer.SetData(nodeIndices.ToArray());
-			selectedEdgesBuffer.SetData(selEdges.ToArray());
-			numSelectedNodes = nodeIndices.Count;
-			numSelectedEdges = selEdges.Count;
+			highlightNodesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), nodeIndices.Count, StructuredBufferFlags.Counter);
+			highlightedEdgesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), selEdges.Count, StructuredBufferFlags.Counter);
+			highlightNodesBuffer.SetData(nodeIndices.ToArray());
+			highlightedEdgesBuffer.SetData(selEdges.ToArray());
+			numHighlightNodes = nodeIndices.Count;
+			numHighlightEdges = selEdges.Count;
 		}
 
 		public void Deselect()
 		{
-			numSelectedNodes = 0;
-			numSelectedEdges = 0;
+			numHighlightNodes = 0;
+			numHighlightEdges = 0;
 		}
 
 
@@ -458,6 +549,8 @@ namespace GraphVis {
 			);
 			edgeIndexLists.Add( new List<int>() );
 		}
+
+
 
 
 		void addEdge( int end1, int end2, float length, float strength )
@@ -593,13 +686,13 @@ namespace GraphVis {
 
 		void disposeOfBuffers()
 		{
-			if (selectedNodesBuffer != null)
+			if (highlightNodesBuffer != null)
 			{
-				selectedNodesBuffer.Dispose();
+				highlightNodesBuffer.Dispose();
 			}
-			if (selectedEdgesBuffer != null)
+			if (highlightedEdgesBuffer != null)
 			{
-				selectedEdgesBuffer.Dispose();
+				highlightedEdgesBuffer.Dispose();
 			}
 		}
 
@@ -690,14 +783,40 @@ namespace GraphVis {
 
 			// draw selected points: ---------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.SELECTION|anchorFlag];
-			device.PixelShaderResources		[1] = selectionTex;
-			device.GeometryShaderResources	[4] = selectedNodesBuffer;
-			device.Draw(numSelectedNodes, 0);
+//			device.PixelShaderResources		[1] = selectionTex;
+			device.PixelShaderResources		[0] = highlightTex;
+			device.GeometryShaderResources	[4] = highlightNodesBuffer;
+			device.Draw(numHighlightNodes, 0);
 
 			// draw selected lines: ----------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.HIGH_LINE|anchorFlag];
-			device.GeometryShaderResources	[5] = selectedEdgesBuffer;
-			device.Draw(numSelectedEdges, 0);
+			device.GeometryShaderResources	[5] = highlightedEdgesBuffer;
+			device.Draw(numHighlightEdges, 0);
+
+			// draw sparks: ------------------------------------------------------------------------
+
+			List<Spark> updSparks = new List<Spark>();
+			foreach (var sp in sparkList)
+			{
+				Spark updSp = sp;
+				updSp.Parameter = sp.Parameter + 0.05f;
+				if (updSp.Parameter < 1.0f)
+				{
+					updSparks.Add(updSp);
+				}
+			}
+			sparkList = updSparks;
+
+			if (sparkBuffer != null && updSparks.Count > 0)
+			{
+				sparkBuffer.SetData(updSparks.ToArray());
+
+				device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.SPARKS | anchorFlag];
+				device.PixelShaderResources		[0] = sparkTex;
+				device.GeometryShaderResources	[2] = ls.CurrentStateBuffer;
+				device.GeometryShaderResources	[6] = sparkBuffer;
+				device.Draw(sparkList.Count, 0);
+			}
 		}
 	}
 }

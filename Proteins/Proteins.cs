@@ -274,6 +274,17 @@ namespace Proteins
 				protGraph.ResetSignals();
 				startPropagate("FZD", SignalType.Plus, "bCAT");
 			}
+			if (e.Key == Keys.D6)
+			{
+				var gs = GetService<GraphSystem>();
+				gs.AddSpark(
+					protGraph.GetIdByName("YAP"),
+					protGraph.GetIdByName("TCF"),
+					1.0f,
+					Color.Red
+					);
+				gs.RefreshSparks();
+			}
 
 
 		}
@@ -340,20 +351,21 @@ namespace Proteins
 
 
 		void propagate()
-		{	
+		{
+			var grSys = GetService<GraphSystem>();
 			List<int> selected = new List<int>();
-			protGraph.Propagate();
+			protGraph.Propagate(grSys, delay);
 			foreach (ProteinNode prot in protGraph.Nodes)
 			{
-				if (prot.Signal == SignalType.Plus || prot.Signal == SignalType.Minus)
+				if (prot.Signal == SignalType.Plus || prot.Signal == SignalType.Minus || prot.Signal == SignalType.End)
 				{
 					selected.Add(protGraph.GetIdByName(prot.Name));
 				}
 			}
-			var grSys = GetService<GraphSystem>();
+			
 			if (selected.Count > 0)
 			{
-				grSys.Select(selected);
+				grSys.Highlight(selected);
 			}
 		}
 
