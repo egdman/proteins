@@ -473,46 +473,6 @@ namespace GraphVis {
 		}
 
 
-		//public void Highlight(int nodeIndex)
-		//{
-		//	Highlight( new int[1] {nodeIndex} );
-		//}
-
-
-		//public void Highlight(ICollection<int> nodeIndices)
-		//{
-		//	if (highlightNodesBuffer != null)
-		//	{
-		//		highlightNodesBuffer.Dispose();
-		//	}
-		//	if (highlightedEdgesBuffer != null)
-		//	{
-		//		highlightedEdgesBuffer.Dispose();
-		//	}
-		//	List<int> selEdges = new List<int>(); 
-		//	foreach (var ind in nodeIndices)
-		//	{
-		//		foreach (var l in edgeIndexLists[ind])
-		//		{
-		//			selEdges.Add(l);
-		//		}
-		//	}
-		//	highlightNodesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), nodeIndices.Count, StructuredBufferFlags.Counter);
-		//	highlightedEdgesBuffer = new StructuredBuffer(Game.GraphicsDevice, typeof(int), selEdges.Count, StructuredBufferFlags.Counter);
-		//	highlightNodesBuffer.SetData(nodeIndices.ToArray());
-		//	highlightedEdgesBuffer.SetData(selEdges.ToArray());
-		//	numHighlightNodes = nodeIndices.Count;
-		//	numHighlightEdges = selEdges.Count;
-		//}
-
-
-		//public void Dehighlight()
-		//{
-		//	numHighlightNodes = 0;
-		//	numHighlightEdges = 0;
-		//}
-
-
 		public void HighlightNodes(int nodeIndex, Color color)
 		{
 			HighlightNodes(new int[1] { nodeIndex }, color);
@@ -633,17 +593,6 @@ namespace GraphVis {
 			edgeIndexLists[end1].Add(edgeNumber);
 
 			edgeIndexLists[end2].Add(edgeNumber);
-
-			// modify particles sizes according to number of edges:
-	//		Particle3d newPrt1 = ParticleList[end1];
-	//		Particle3d newPrt2 = ParticleList[end2];
-	//		newPrt1.Size	+= 0.1f;
-	//		newPrt2.Size	+= 0.1f;
-	//		ParticleList[end1] = newPrt1;
-	//		ParticleList[end2] = newPrt2;
-	//		stretchLinks(end1);
-	//		stretchLinks(end2);
-
 		}
 
 
@@ -839,15 +788,19 @@ namespace GraphVis {
 			// draw points: ------------------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW|(int)RenderFlags.POINT|anchorFlag];
 			device.SetCSRWBuffer( 0, null );
-			device.PixelShaderResources		[0] = particleTex;
 			device.GeometryShaderResources	[2] = ls.CurrentStateBuffer;
-			device.Draw( nodeList.Count, 0 );
+			
+			device.PixelShaderResources	[0] = particleTex;
+			device.Draw(nodeList.Count, 0);
+			
 						
 			// draw lines: -------------------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW|(int)RenderFlags.LINE|anchorFlag];
 			device.GeometryShaderResources	[2] = ls.CurrentStateBuffer;
 			device.GeometryShaderResources	[3] = ls.LinksBuffer;
 			device.Draw( edgeList.Count, 0 );
+
+
 
 			// draw highlighted points: ---------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.SELECTION|anchorFlag];

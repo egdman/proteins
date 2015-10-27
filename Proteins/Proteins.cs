@@ -10,6 +10,7 @@ using Fusion.Audio;
 using Fusion.Input;
 using Fusion.Content;
 using Fusion.Development;
+using Fusion.UserInterface;
 using GraphVis;
 
 namespace Proteins
@@ -32,6 +33,15 @@ namespace Proteins
 
 		Color nodeHighlightColorPos;
 		Color nodeHighlightColorNeg;
+		SpriteFont font;
+
+		Frame button1;
+		Frame button2;
+		Frame button3;
+		Frame button4;
+		Frame button5;
+		Frame button6;
+
 
 		Random rnd = new Random();
 
@@ -41,8 +51,6 @@ namespace Proteins
 		int delay;
 		int delay2;
 
-		bool YAPNucleus;
-		bool bCATNucleus;
 		/// <summary>
 		/// Proteins constructor
 		/// </summary>
@@ -62,6 +70,7 @@ namespace Proteins
 			AddService(new DebugRender(this), true, true, 9998, 9998);
 			AddService(new GraphSystem(this), true, true, 9997, 9997);
 			AddService(new GreatCircleCamera(this), true, true, 9996, 9996);
+			AddService(new UserInterface(this, "stencil"), true, true, 9995, 9995);
 
 			//	add here additional services :
 
@@ -84,9 +93,6 @@ namespace Proteins
 			delay = 500;
 			delay2 = 5000;
 
-			YAPNucleus = true;
-			bCATNucleus = true;
-
 
 			nodeHighlightColorNeg = Color.Red;
 			nodeHighlightColorPos = Color.Green;
@@ -106,6 +112,75 @@ namespace Proteins
 			InputDevice.KeyDown += InputDevice_KeyDown;
 
 			//	load content & create graphics and audio resources here:
+
+			// Add graphical user interface:
+			font = Content.Load<SpriteFont>("stencil");
+			var UI = GetService<UserInterface>();
+			UI.RootFrame = new Frame(this, 0, 0, 800, 600, "", Color.Zero)
+			{
+				Border = 1,
+                BorderColor = Color.White
+			};
+			int x = 10;
+			int y = 100;
+			int btnWidth = 60;
+			int btnHeight = 40;
+			int padding = 5;
+			button1 = new Frame(this,x,y,btnWidth,btnHeight,"1",Color.Zero)
+			{
+				Font = font,
+				Border = 1,
+				BorderColor = Color.Red,
+				TextAlignment = Alignment.MiddleCenter
+			};
+			button2 = new Frame(this,x, y + (btnHeight + padding), btnWidth, btnHeight, "2", Color.Zero)
+			{
+				Font = font,
+				Border = 1,
+				BorderColor = Color.Red,
+				TextAlignment = Alignment.MiddleCenter
+			};
+			button3 = new Frame(this, x, y + 2*(btnHeight + padding), btnWidth, btnHeight, "3", Color.Zero)
+			{
+				Font = font,
+				Border = 1,
+				BorderColor = Color.Red,
+				TextAlignment = Alignment.MiddleCenter
+			};
+			button4 = new Frame(this, x, y + 3*(btnHeight + padding), btnWidth, btnHeight, "4", Color.Zero)
+			{
+				Font = font,
+				Border = 1,
+				BorderColor = Color.Red,
+				TextAlignment = Alignment.MiddleCenter
+			};
+			button5 = new Frame(this, x, y + 4*(btnHeight + padding), btnWidth, btnHeight, "5", Color.Zero)
+			{
+				Font = font,
+				Border = 1,
+				BorderColor = Color.Red,
+				TextAlignment = Alignment.MiddleCenter
+			};
+			button6 = new Frame(this, x, y + 5*(btnHeight + padding), btnWidth, btnHeight, "6", Color.Zero)
+			{
+				Font = font,
+				Border = 1,
+				BorderColor = Color.Red,
+				TextAlignment = Alignment.MiddleCenter
+			};
+			UI.RootFrame.Add(button1);
+			UI.RootFrame.Add(button2);
+			UI.RootFrame.Add(button3);
+			UI.RootFrame.Add(button4);
+			UI.RootFrame.Add(button5);
+			UI.RootFrame.Add(button6);
+
+			button1.Click += (s, e) => action1();
+			button2.Click += (s, e) => action2();
+			button3.Click += (s, e) => action3();
+			button4.Click += (s, e) => action4();
+			button5.Click += (s, e) => action5();
+			button6.Click += (s, e) => action6();
 
 			var gs = GetService<GraphSystem>();
 			gs.BackgroundColor = Color.Black;
@@ -151,6 +226,43 @@ namespace Proteins
 			base.Dispose(disposing);
 		}
 
+
+		void action1()
+		{
+			protGraph.ResetSignals();
+			startPropagate("YAP", SignalType.Plus, "TCF");
+		}
+
+		void action2()
+		{
+			protGraph.ResetSignals();
+			startPropagate("PKCa", SignalType.Plus, "YAP");
+		}
+
+		void action3()
+		{
+			protGraph.ResetSignals();
+			startPropagate("Ecad", SignalType.Plus, "YAP");
+		}
+
+		void action4()
+		{
+			protGraph.ResetSignals();
+			startPropagate("PKCa", SignalType.Plus, "YAP");
+			startPropagate("Ecad", SignalType.Plus, "YAP");
+		}
+
+		void action5()
+		{
+			protGraph.ResetSignals();
+			startPropagate("FZD", SignalType.Plus, "bCAT");
+		}
+
+		void action6()
+		{
+			protGraph.ResetSignals();
+			startPropagate("bCAT", SignalType.Plus, "TCF");
+		}
 
 
 		/// <summary>
@@ -225,10 +337,10 @@ namespace Proteins
 					Console.WriteLine();
 				}
 			}
-			//if (e.Key == Keys.R)
-			//{
-			//	protGraph.ResetSignals();
-			//}
+			if (e.Key == Keys.R)
+			{
+				protGraph.ResetSignals();
+			}
 			//if (e.Key == Keys.Q)
 			//{
 			//	Graph graph = GetService<GraphSystem>().GetGraph();
@@ -237,43 +349,29 @@ namespace Proteins
 			//}
 			if (e.Key == Keys.D1)
 			{
-				protGraph.ResetSignals();
-				startPropagate("YAP", SignalType.Plus, "TCF");
+				action1();
 			}
 			if (e.Key == Keys.D2)
 			{
-				protGraph.ResetSignals();
-				startPropagate("PKCa", SignalType.Plus, "YAP");
+				action2();
 			}
 
 			if (e.Key == Keys.D3)
 			{
-				protGraph.ResetSignals();
-				startPropagate("Ecad", SignalType.Plus, "YAP");
+				action3();
 			}
 			if (e.Key == Keys.D4)
 			{
-				protGraph.ResetSignals();
-				startPropagate("PKCa", SignalType.Plus, "YAP");
-				startPropagate("Ecad", SignalType.Plus, "YAP");
+				action4();
 			}
 			if (e.Key == Keys.D5)
 			{
-				protGraph.ResetSignals();
-				startPropagate("FZD", SignalType.Plus, "bCAT");
+				action5();
 			}
 			if (e.Key == Keys.D6)
 			{
-				var gs = GetService<GraphSystem>();
-				gs.AddSpark(
-					protGraph.GetIdByName("YAP"),
-					protGraph.GetIdByName("TCF"),
-					1.0f,
-					Color.Red
-					);
+				action6();
 			}
-
-
 		}
 
 
@@ -334,6 +432,7 @@ namespace Proteins
 			base.Draw(gameTime, stereoEye);
 
 			//	Draw stuff here :
+			GetService<UserInterface>().Draw(gameTime, stereoEye);
 		}
 
 
