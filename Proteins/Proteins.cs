@@ -112,7 +112,7 @@ namespace Proteins
 			gs.BlendMode = BlendState.Additive;
 
 			protGraph.ReadFromFile("../../../../signalling_table.csv");
-			protGraph.GetProtein("bCAT").Deactivate();
+//			protGraph.GetProtein("bCAT").Deactivate();
 			protGraph.HighlightNodesColorPos = nodeHighlightColorPos;
 			protGraph.HighlightNodesColorNeg = nodeHighlightColorNeg;
 
@@ -129,6 +129,9 @@ namespace Proteins
 			graphSys.AddCategory(nucleus, new Vector3(0, 0, 0), 100);
 
 			graphSys.AddGraph(protGraph);
+			var gr = graphSys.GetGraph();
+			gr.ReadLayoutFromFile("../../../../graph.gr");
+			graphSys.UpdateGraph(gr);
 			graphSys.Unpause();
 		}
 
@@ -176,10 +179,6 @@ namespace Proteins
 			{
 				Exit();
 			}
-			if (e.Key == Keys.X)
-			{
-				
-			}
 			if (e.Key == Keys.P) // pause/unpause
 			{
 				var gs = GetService<GraphSystem>();
@@ -226,20 +225,20 @@ namespace Proteins
 					Console.WriteLine();
 				}
 			}
-			if (e.Key == Keys.R)
-			{
-				protGraph.ResetSignals();
-			}
-			if (e.Key == Keys.Q)
-			{
-				Graph graph = GetService<GraphSystem>().GetGraph();
-				graph.WriteToFile("../../../../graph.gr");
-				Log.Message("Graph saved to file");
-			}
+			//if (e.Key == Keys.R)
+			//{
+			//	protGraph.ResetSignals();
+			//}
+			//if (e.Key == Keys.Q)
+			//{
+			//	Graph graph = GetService<GraphSystem>().GetGraph();
+			//	graph.WriteToFile("../../../../graph.gr");
+			//	Log.Message("Graph saved to file");
+			//}
 			if (e.Key == Keys.D1)
 			{
 				protGraph.ResetSignals();
-				startPropagate("PKCa", SignalType.Plus, "TCF");
+				startPropagate("YAP", SignalType.Plus, "TCF");
 			}
 			if (e.Key == Keys.D2)
 			{
@@ -272,7 +271,6 @@ namespace Proteins
 					1.0f,
 					Color.Red
 					);
-				gs.RefreshSparks();
 			}
 
 

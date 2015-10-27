@@ -316,6 +316,41 @@ namespace GraphVis
 			}
 		}
 
+		public void ReadLayoutFromFile(string path)
+		{
+			var lines = File.ReadAllLines(path);
+			foreach (var line in lines)
+			{
+				if (line.Contains("nodes"))
+				{
+					continue;
+				}
+				if (line.Contains("edges"))
+				{
+					break;
+				}
+				string[] parts = line.Split(',');
+				Dictionary<string, string> pairs = new Dictionary<string, string>();
+				foreach (var part in parts)
+				{
+					string[] elements = part.Split(':');
+					pairs.Add(elements[0], elements[1]);
+				}
+				int id = int.Parse(pairs["id"]);
+				float X = float.Parse(pairs["X"]);
+				float Y = float.Parse(pairs["Y"]);
+				float Z = float.Parse(pairs["Z"]);
+
+				var oldNode = Nodes[id];
+				SpatialNode spNode = new SpatialNode(
+					new Fusion.Mathematics.Vector3(X, Y, Z),
+					oldNode.GetSize(),
+					oldNode.GetColor()
+				);
+				Nodes[id] = spNode;
+			}
+		}
+
 
 	}
 }

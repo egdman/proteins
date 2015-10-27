@@ -44,12 +44,7 @@ namespace Proteins
 		}
 
 
-		public void ReadLayoutFromFile(string path)
-		{
-			var lines = File.ReadAllLines(path);
-		}
-
-
+		
 		public override void ReadFromFile(string path)
 		{
 			var lines = File.ReadAllLines(path);
@@ -258,11 +253,11 @@ namespace Proteins
 							}
 
 							// if next protein is not a destination:
-							if (nextProt.Signal != SignalType.End)
+							if (nextProt.Signal != SignalType.End && outInteraction.Type != "b")
 							{
 								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
 							}
-							else
+							else if (outInteraction.Type != "b")
 							{
 								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, SignalType.End));
 							}
