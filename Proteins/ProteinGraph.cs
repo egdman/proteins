@@ -295,7 +295,14 @@ namespace Proteins
 						}
 						else if (outInteraction.Type == "b")
 						{
-							couple(prot.Name, nextProt.Name, graphSystem);
+							if (outInteraction.Value > decoupleStrength)
+							{
+								decouple(prot.Name, nextProt.Name, graphSystem);
+							}
+							else
+							{
+								couple(prot.Name, nextProt.Name, graphSystem);
+							}
 						}
 					}
 				}
