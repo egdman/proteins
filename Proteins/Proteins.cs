@@ -33,6 +33,7 @@ namespace Proteins
 
 		Color nodeHighlightColorPos;
 		Color nodeHighlightColorNeg;
+		TextureAtlas atlas;
 		SpriteFont font;
 
 		Frame button1;
@@ -116,11 +117,8 @@ namespace Proteins
 			// Add graphical user interface:
 			font = Content.Load<SpriteFont>("stencil");
 			var UI = GetService<UserInterface>();
-			UI.RootFrame = new Frame(this, 0, 0, 800, 600, "", Color.Zero)
-			{
-				Border = 1,
-                BorderColor = Color.White
-			};
+			UI.RootFrame = new Frame(this, 0, 0, 800, 600, "", Color.Zero);
+
 			int x = 10;
 			int y = 100;
 			int btnWidth = 60;
@@ -229,39 +227,39 @@ namespace Proteins
 
 		void action1()
 		{
-			protGraph.ResetSignals();
-			startPropagate("YAP", SignalType.Plus, "TCF");
+//			protGraph.ResetSignals();
+			startPropagate("YAP", SignalType.Plus);
 		}
 
 		void action2()
 		{
-			protGraph.ResetSignals();
+//			protGraph.ResetSignals();
 			startPropagate("PKCa", SignalType.Plus, "YAP");
 		}
 
 		void action3()
 		{
-			protGraph.ResetSignals();
+//			protGraph.ResetSignals();
 			startPropagate("Ecad", SignalType.Plus, "YAP");
 		}
 
 		void action4()
 		{
-			protGraph.ResetSignals();
+//			protGraph.ResetSignals();
 			startPropagate("PKCa", SignalType.Plus, "YAP");
 			startPropagate("Ecad", SignalType.Plus, "YAP");
 		}
 
 		void action5()
 		{
-			protGraph.ResetSignals();
+//			protGraph.ResetSignals();
 			startPropagate("FZD", SignalType.Plus, "bCAT");
 		}
 
 		void action6()
 		{
-			protGraph.ResetSignals();
-			startPropagate("bCAT", SignalType.Plus, "TCF");
+//			protGraph.ResetSignals();
+			startPropagate("bCAT", SignalType.Plus);
 		}
 
 
@@ -442,7 +440,7 @@ namespace Proteins
 			protGraph.Propagate(grSys, delay);
 		}
 
-		void startPropagate(string startName, SignalType signal, string endName)
+		void startPropagate(string startName, SignalType signal, string endName = "")
 		{
 			timer = 0;
 			var grSys = GetService<GraphSystem>();
@@ -453,7 +451,10 @@ namespace Proteins
 			}
 
 			protGraph.GetProtein(startName).Signal = signal;
-			protGraph.GetProtein(endName).Signal = SignalType.End;
+			if (endName != "")
+			{
+				protGraph.GetProtein(endName).Signal = SignalType.End;
+			}
 			grSys.HighlightNodes(protGraph.GetIdByName(startName), nodeHighlightColorPos);
 		}
 

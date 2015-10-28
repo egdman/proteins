@@ -139,19 +139,6 @@
     <Compression>RGB</Compression>
     <SourceFile>smaller.tga</SourceFile>
   </Asset>
-  <Asset xsi:type="ImageFileTextureAsset">
-    <AssetPath>spark.tga</AssetPath>
-    <BuildOrder>0</BuildOrder>
-    <IgnoreToolChanges>false</IgnoreToolChanges>
-    <NoMips>false</NoMips>
-    <Fast>false</Fast>
-    <ToNormal>false</ToNormal>
-    <Color>true</Color>
-    <Alpha>false</Alpha>
-    <Normal>false</Normal>
-    <Compression>RGB</Compression>
-    <SourceFile>spark.tga</SourceFile>
-  </Asset>
   <Asset xsi:type="BMFontSpriteFontAsset">
     <AssetPath>stencil.bmfc</AssetPath>
     <BuildOrder>0</BuildOrder>
@@ -170,5 +157,36 @@
     <Normal>false</Normal>
     <Compression>RGB</Compression>
     <SourceFile>Temp\E75245313404ADC218A0C086CF1DD345_0.tga</SourceFile>
+  </Asset>
+  <Asset xsi:type="ImageFileTextureAsset">
+    <AssetPath>spark.tga</AssetPath>
+    <BuildOrder>0</BuildOrder>
+    <IgnoreToolChanges>false</IgnoreToolChanges>
+    <NoMips>false</NoMips>
+    <Fast>false</Fast>
+    <ToNormal>false</ToNormal>
+    <Color>true</Color>
+    <Alpha>false</Alpha>
+    <Normal>false</Normal>
+    <Compression>RGB</Compression>
+    <SourceFile>spark.tga</SourceFile>
+  </Asset>
+  <Asset xsi:type="AssembledTextureAtlasAsset">
+    <AssetPath>protein_textures</AssetPath>
+    <BuildOrder>0</BuildOrder>
+    <IgnoreToolChanges>false</IgnoreToolChanges>
+    <Files>protein_textures\*.tga</Files>
+    <NoMips>false</NoMips>
+    <UseDXT>false</UseDXT>
+    <HalfTexel>false</HalfTexel>
+    <Width>5376</Width>
+    <Height>256</Height>
+    <Padding>0</Padding>
+    <FillColor>
+      <R>0</R>
+      <G>0</G>
+      <B>0</B>
+      <A>255</A>
+    </FillColor>
   </Asset>
 </ArrayOfAsset>

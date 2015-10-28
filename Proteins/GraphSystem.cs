@@ -161,6 +161,8 @@ namespace GraphVis {
 		Texture2D		particleTex;
 		Texture2D		highlightTex;
 		Texture2D		sparkTex;
+		TextureAtlas	atlas;
+
 		Ubershader		renderShader;
 		Ubershader		computeShader;
 		StateFactory	factory;
@@ -294,6 +296,8 @@ namespace GraphVis {
 			renderShader	=	Game.Content.Load<Ubershader>("Render");
 			computeShader	=	Game.Content.Load<Ubershader>("Compute");
 
+			atlas			=	Game.Content.Load<TextureAtlas>("protein_textures");
+			
 			// creating the layout system:
 			lay = new LayoutSystem(Game, computeShader);
 			lay.UseGPU = Config.UseGPU;
@@ -322,6 +326,15 @@ namespace GraphVis {
 			referenceNodeIndex	=	0;
 
 			Game.InputDevice.KeyDown += keyboardHandler;
+
+			string[] texNames = atlas.SubImageNames;
+			for (int i = 0; i < texNames.GetLength(0); ++i)
+			{
+				var rect = atlas.GetSubImageRectangle(texNames[i]);
+				Console.WriteLine(texNames[i] + ":");	
+				Console.WriteLine("   top left : " + rect.TopLeft.X + ", " + rect.TopLeft.Y);
+				Console.WriteLine("bottom right: " + rect.BottomRight.X + ", " + rect.BottomRight.Y);
+			}
 
 			base.Initialize();
 		}
@@ -785,16 +798,17 @@ namespace GraphVis {
 
 			int anchorFlag = (AnchorToNodes ? (int)RenderFlags.RELATIVE_POS : (int)RenderFlags.ABSOLUTE_POS);
 			
-			// draw points: ------------------------------------------------------------------------
+			// draw points: ---------------------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW|(int)RenderFlags.POINT|anchorFlag];
 			device.SetCSRWBuffer( 0, null );
 			device.GeometryShaderResources	[2] = ls.CurrentStateBuffer;
 			
-			device.PixelShaderResources	[0] = particleTex;
+//			device.PixelShaderResources		[0] = particleTex;
+			device.PixelShaderResources		[0] = atlas.Texture;
 			device.Draw(nodeList.Count, 0);
-			
-						
-			// draw lines: -------------------------------------------------------------------------
+
+								
+			// draw lines: ----------------------------------------------------------------------------
 			device.PipelineState = factory[(int)RenderFlags.DRAW|(int)RenderFlags.LINE|anchorFlag];
 			device.GeometryShaderResources	[2] = ls.CurrentStateBuffer;
 			device.GeometryShaderResources	[3] = ls.LinksBuffer;
@@ -820,8 +834,8 @@ namespace GraphVis {
 			device.GeometryShaderResources	[5] = highlightedEdgesBuffer;
 	//		device.Draw(highlightedEdgesBuffer.GetStructureCount(), 0);
 
-			// draw sparks: ------------------------------------------------------------------------
 
+			// draw sparks: ---------------------------------------------------------------------------
 			List<Spark> updSparks = new List<Spark>();
 			foreach (var sp in sparkList)
 			{

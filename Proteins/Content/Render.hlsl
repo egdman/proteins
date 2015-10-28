@@ -109,8 +109,9 @@ void GSMain( point VSOutput inputPoint[1], inout TriangleStream<GSOutput> output
 {
 
 	GSOutput p0, p1, p2, p3;
+	int id = inputPoint[0].vertexID;
 
-	PARTICLE3D prt = particleReadBuffer[ inputPoint[0].vertexID ];
+	PARTICLE3D prt = particleReadBuffer[ id ];
 	PARTICLE3D referencePrt = particleReadBuffer[ Params.SelectedParticle ];
 
 	float sz = prt.Size0 * Params.nodeScale;
@@ -126,22 +127,24 @@ void GSMain( point VSOutput inputPoint[1], inout TriangleStream<GSOutput> output
 	float4 pos		=	float4( prt.Position.xyz, 1 );
 #endif // ABSOLUTE_POS
 
+	float texDist = 1.0f / (float)Params.MaxParticles;
+
 	float4 posV		=	mul( pos, Params.View );
 
-	p0.Position = mul( posV + float4( sz, sz, 0, 0 ) , Params.Projection );		
-	p0.TexCoord = float2(1,1);
+	p0.Position = mul( posV + float4( -sz, -sz, 0, 0 ) , Params.Projection );		
+	p0.TexCoord = float2(id*texDist, 1);
 	p0.Color = color;
 
 	p1.Position = mul( posV + float4(-sz, sz, 0, 0 ) , Params.Projection );
-	p1.TexCoord = float2(0,1);
+	p1.TexCoord = float2(id*texDist, 0);
 	p1.Color = color;
 
-	p2.Position = mul( posV + float4(-sz,-sz, 0, 0 ) , Params.Projection );
-	p2.TexCoord = float2(0,0);
+	p2.Position = mul( posV + float4(sz,sz, 0, 0 ) , Params.Projection );
+	p2.TexCoord = float2((id+1)*texDist, 0);
 	p2.Color = color;
 
-	p3.Position = mul( posV + float4( sz,-sz, 0, 0 ) , Params.Projection );
-	p3.TexCoord = float2(1,0);
+	p3.Position = mul( posV + float4( sz, -sz, 0, 0 ) , Params.Projection );
+	p3.TexCoord = float2((id+1)*texDist, 1);
 	p3.Color = color;
 
 	outputStream.Append(p0);
