@@ -173,9 +173,6 @@ namespace GraphVis {
 		List<Tuple<StructuredBuffer, HighlightParams>> highlightNodesList;
 		List<Tuple<StructuredBuffer, HighlightParams>> highlightEdgesList;
 
-		StructuredBuffer	highlightNodesBuffer; // list of indices of highlighted nodes
-		StructuredBuffer	highlightedEdgesBuffer; // list of indices of highlighted edges
-
 		StructuredBuffer	sparkBuffer;
 
 		ConstantBuffer		paramsCB;
@@ -191,10 +188,7 @@ namespace GraphVis {
 
 		LayoutSystem		lay;
 
-		int		numHighlightNodes;
-		int		numHighlightEdges;
 		int		referenceNodeIndex;
-
 
 
 		public Color BackgroundColor
@@ -321,20 +315,9 @@ namespace GraphVis {
 			sparkList			=	new List<Spark>();
 			commandQueue		=	new Queue<int>();
 
-			numHighlightNodes	=	0;
-			numHighlightEdges	=	0;
 			referenceNodeIndex	=	0;
 
 			Game.InputDevice.KeyDown += keyboardHandler;
-
-			string[] texNames = atlas.SubImageNames;
-			for (int i = 0; i < texNames.GetLength(0); ++i)
-			{
-				var rect = atlas.GetSubImageRectangle(texNames[i]);
-				Console.WriteLine(texNames[i] + ":");	
-				Console.WriteLine("   top left : " + rect.TopLeft.X + ", " + rect.TopLeft.Y);
-				Console.WriteLine("bottom right: " + rect.BottomRight.X + ", " + rect.BottomRight.Y);
-			}
 
 			base.Initialize();
 		}
@@ -715,14 +698,6 @@ namespace GraphVis {
 
 		void disposeOfBuffers()
 		{
-			if (highlightNodesBuffer != null)
-			{
-				highlightNodesBuffer.Dispose();
-			}
-			if (highlightedEdgesBuffer != null)
-			{
-				highlightedEdgesBuffer.Dispose();
-			}
 			DehighlightNodes();
 		}
 
@@ -830,8 +805,8 @@ namespace GraphVis {
 			}
 
 			// draw highlighted lines: ----------------------------------------------------------------
-			device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.HIGH_LINE|anchorFlag];
-			device.GeometryShaderResources	[5] = highlightedEdgesBuffer;
+	//		device.PipelineState = factory[(int)RenderFlags.DRAW | (int)RenderFlags.HIGH_LINE|anchorFlag];
+	//		device.GeometryShaderResources	[5] = highlightedEdgesBuffer;
 	//		device.Draw(highlightedEdgesBuffer.GetStructureCount(), 0);
 
 

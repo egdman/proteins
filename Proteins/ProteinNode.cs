@@ -33,6 +33,8 @@ namespace Proteins
 			}
 		}
 
+		public bool Blocked { get; set; }
+
 
 		public string Name
 		{
@@ -53,13 +55,16 @@ namespace Proteins
 		public ProteinNode(string Text, float size, Color color)
 			: base(Text, size, color)
 		{
-			active = true;
+			active = false;
 			Signal = SignalType.None;
 		}
 
 		public void Activate()
 		{
-			active = true;
+			if (!Blocked)
+			{
+				active = true;
+			}
 		}
 
 		public void Deactivate()

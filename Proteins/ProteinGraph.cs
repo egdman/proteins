@@ -25,8 +25,15 @@ namespace Proteins
 		}
 		Dictionary<string, int> idByName;
 
+
+		float coupleStrength;
+		float decoupleStrength;
+
 		public Color HighlightNodesColorPos { get; set; }
 		public Color HighlightNodesColorNeg { get; set; }
+
+
+		List<int> inputs;
 
 		public int GetIdByName(string name)
 		{
@@ -41,8 +48,22 @@ namespace Proteins
 			HighlightNodesColorPos = 
 				HighlightNodesColorNeg = 
 				Color.White;
+			inputs = new List<int>();
+			coupleStrength = 5.0f;
+			decoupleStrength = 0.5f;
 		}
 
+
+
+		public void AddInput(string Name)
+		{
+			inputs.Add(GetIdByName(Name));
+		}
+
+		public void ClearInputs()
+		{
+			inputs.Clear();
+		}
 
 		
 		public override void ReadFromFile(string path)
@@ -75,7 +96,8 @@ namespace Proteins
 					idByName.Add(name, numNodes);
 					++numNodes;
 
-					Color color = new Color((float)cat1, (float)cat2, (float)cat3);
+//					Color color = new Color((float)cat1, (float)cat2, (float)cat3);
+					Color color = Color.White;
 					AddNode(new ProteinNode(name, 1.0f, color));
 					 
 				}
@@ -193,15 +215,15 @@ namespace Proteins
 			}
 			if (interType[0] == '+')
 			{
-				strength = 0.5f;
+				strength = decoupleStrength;
 			}
 			else if (interType[0] == '-')
 			{
-				strength = 0.5f;
+				strength = decoupleStrength;
 			}
 			else if (interType[0] == 'b')
 			{
-				strength = 0.5f;
+				strength = decoupleStrength;
 			}
 			else
 			{
@@ -217,121 +239,125 @@ namespace Proteins
 			List<Tuple<int, SignalType>> updatedSignals
 				 = new List<Tuple<int,SignalType>>();
 			graphSystem.DehighlightNodes();
+			
 
-			foreach (ProteinNode prot in Nodes)
+			List<int> activateNodes = new List<int>();
+			List<int> blockNodes = new List<int>();
+
+			// activate input proteins:
+			foreach (int i in inputs)
 			{
-				if (prot.Signal != SignalType.None)
+				GetProtein(i).Activate();
+			}
+
+
+
+			// coupling / decoupling: -------------------------------------
+			foreach (ProteinInteraction e in Edges)
+			{
+				if (e.Type == "b")
 				{
-					SignalType signal = prot.Signal;
-
-					// if this is not the end of chain, transmit signal further:
-					if (prot.Signal != SignalType.End)
+					if (!GetProtein(e.End1).Active && !GetProtein(e.End2).Active)
 					{
-						var outInteractions = GetOutcomingInteractions(prot.Name);
-						foreach (var tuple in outInteractions)
+						if (e.Value > decoupleStrength)
 						{
-							var outInteraction = tuple.Item1;
-							ProteinNode nextProt = GetProtein(outInteraction.End2);
-
-							if (outInteraction.Type == "-")
-							{
-								signal = ProteinNode.FlipSignal(signal);
-							}
-
-							if (outInteraction.Type == "b")
-							{
-								couple(prot.Name, nextProt.Name, graphSystem);
-							}
-
-							if (signal == SignalType.Plus)
-							{
-								graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Green);
-							}
-							else if (signal == SignalType.Minus)
-							{
-								graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, Color.Red);
-							}
-
-							// if next protein is not a destination:
-							if (nextProt.Signal != SignalType.End && outInteraction.Type != "b")
-							{
-								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, signal));
-							}
-							else if (outInteraction.Type != "b")
-							{
-								updatedSignals.Add(new Tuple<int, SignalType>(outInteraction.End2, SignalType.End));
-							}
+							decouple(GetProtein(e.End1).Name, GetProtein(e.End2).Name, graphSystem);
 						}
 					}
 				}
-				if (prot.Signal == SignalType.End)
+			}
+			// ------------------------------------------------------------
+
+
+
+
+
+			highlight(graphSystem);
+			foreach (ProteinNode prot in Nodes)
+			{
+
+				if (prot.Active)
 				{
-					graphSystem.HighlightNodes(GetIdByName(prot.Name), Color.White);
-				}
-				else
-				{
-					prot.Signal = SignalType.None;
+					var outInteractions = GetOutcomingInteractions(prot.Name);
+					foreach (var tuple in outInteractions)
+					{
+						var outInteraction = tuple.Item1;
+						ProteinNode nextProt = GetProtein(outInteraction.End2);
+						if (outInteraction.Type == "-")
+						{
+							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, HighlightNodesColorNeg);
+							blockNodes.Add(outInteraction.End2);
+						}
+						else if (outInteraction.Type == "+")
+						{
+							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, HighlightNodesColorPos);
+							activateNodes.Add(outInteraction.End2);
+						}
+						else if (outInteraction.Type == "b")
+						{
+							couple(prot.Name, nextProt.Name, graphSystem);
+						}
+					}
 				}
 			}
 
 
 			graphSystem.RefreshSparks();
-			List<int> highlightNodesPos = new List<int>();
-			List<int> highlightNodesNeg = new List<int>();
-
-
-			if (updatedSignals.Count == 0)
+			DeactivateAll();
+			UnblockAll();
+			foreach (var i in activateNodes)
 			{
-				ResetSignals();
-				decoupleEverything(graphSystem);
+				GetProtein(i).Activate();
 			}
-
-			// update signals in nodes:
-			foreach (var tuple in updatedSignals)
+			foreach (var i in blockNodes)
 			{
-				GetProtein(tuple.Item1).Signal = tuple.Item2;
-				if (tuple.Item2 == SignalType.Plus)
-				{
-					highlightNodesPos.Add(tuple.Item1);
-				}
-				else if (tuple.Item2 == SignalType.Minus)
-				{
-					highlightNodesNeg.Add(tuple.Item1);
-				}
-
-				if (tuple.Item2 == SignalType.Plus)
-				{
-					GetProtein(tuple.Item1).Activate();
-				}
-				else if (tuple.Item2 == SignalType.Minus)
-				{
-					GetProtein(tuple.Item1).Deactivate();
-				}
+				GetProtein(i).Deactivate();
+				GetProtein(i).Blocked = true;
 			}
-			
-			graphSystem.HighlightNodes(highlightNodesPos, HighlightNodesColorPos);
-			graphSystem.HighlightNodes(highlightNodesNeg, HighlightNodesColorNeg);
 		}
 
 
-		public void ResetSignals()
+
+		void highlight(GraphSystem graphSystem)
+		{
+			List<int> highPlus = new List<int>();
+			List<int> highMinus = new List<int>();
+			foreach (ProteinNode node in Nodes)
+			{
+				if (node.Active) highPlus.Add(GetIdByName(node.Name));
+				else if (node.Blocked) highMinus.Add(GetIdByName(node.Name));
+			}
+			graphSystem.HighlightNodes(highPlus, HighlightNodesColorPos);
+			graphSystem.HighlightNodes(highMinus, HighlightNodesColorNeg);
+		}
+
+
+		public void DeactivateAll()
 		{
 			foreach (ProteinNode prot in Nodes)
 			{
-				prot.Signal = SignalType.None;
+				prot.Deactivate();
 			}
 		}
 
+
+		public void UnblockAll()
+		{
+			foreach (ProteinNode prot in Nodes)
+			{
+				prot.Blocked = false;
+			}
+		}
 		
 		void couple(string name1, string name2, GraphSystem graphSystem)
 		{
-			changeEdgeValue(name1, name2, 5.0f, graphSystem);
+			changeEdgeValue(name1, name2, coupleStrength, graphSystem);
 		}
 
 
 		void decouple(string name1, string name2, GraphSystem graphSystem)
 		{
-			changeEdgeValue(name1, name2, 0.5f, graphSystem);
+			changeEdgeValue(name1, name2, decoupleStrength, graphSystem);
 		}
 
 
@@ -345,6 +371,7 @@ namespace Proteins
 				int index = inter.Item2;
 				var interaction = inter.Item1;
 				graph.Edges[index].Value = value;
+				this.Edges[index].Value = value;
 			}
 			graphSystem.UpdateGraph(graph);
 		}
@@ -354,7 +381,7 @@ namespace Proteins
 			var graph = graphSystem.GetGraph();
 			foreach (var e in graph.Edges)
 			{
-				e.Value = 0.5f;
+				e.Value = decoupleStrength;
 			}
 			graphSystem.UpdateGraph(graph);
 		}

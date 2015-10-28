@@ -33,7 +33,6 @@ namespace Proteins
 
 		Color nodeHighlightColorPos;
 		Color nodeHighlightColorNeg;
-		TextureAtlas atlas;
 		SpriteFont font;
 
 		Frame button1;
@@ -42,7 +41,7 @@ namespace Proteins
 		Frame button4;
 		Frame button5;
 		Frame button6;
-
+		Frame resetBtn;
 
 		Random rnd = new Random();
 
@@ -92,7 +91,7 @@ namespace Proteins
 			timer2 = 0;
 
 			delay = 500;
-			delay2 = 5000;
+			delay2 = 3000;
 
 
 			nodeHighlightColorNeg = Color.Red;
@@ -166,12 +165,20 @@ namespace Proteins
 				BorderColor = Color.Red,
 				TextAlignment = Alignment.MiddleCenter
 			};
+			resetBtn = new Frame(this, x, y + 6 * (btnHeight + padding), btnWidth, btnHeight, "R", Color.Zero)
+			{
+				Font = font,
+				Border = 1,
+				BorderColor = Color.Red,
+				TextAlignment = Alignment.MiddleCenter
+			};
 			UI.RootFrame.Add(button1);
 			UI.RootFrame.Add(button2);
 			UI.RootFrame.Add(button3);
 			UI.RootFrame.Add(button4);
 			UI.RootFrame.Add(button5);
 			UI.RootFrame.Add(button6);
+			UI.RootFrame.Add(resetBtn);
 
 			button1.Click += (s, e) => action1();
 			button2.Click += (s, e) => action2();
@@ -179,13 +186,15 @@ namespace Proteins
 			button4.Click += (s, e) => action4();
 			button5.Click += (s, e) => action5();
 			button6.Click += (s, e) => action6();
+			resetBtn.Click += (s, e) => ResetGraph();
 
 			var gs = GetService<GraphSystem>();
 			gs.BackgroundColor = Color.Black;
 			gs.BlendMode = BlendState.Additive;
 
 			protGraph.ReadFromFile("../../../../signalling_table.csv");
-//			protGraph.GetProtein("bCAT").Deactivate();
+			ResetGraph();
+
 			protGraph.HighlightNodesColorPos = nodeHighlightColorPos;
 			protGraph.HighlightNodesColorNeg = nodeHighlightColorNeg;
 
@@ -227,39 +236,33 @@ namespace Proteins
 
 		void action1()
 		{
-//			protGraph.ResetSignals();
-			startPropagate("YAP", SignalType.Plus);
+			startPropagate("YAP");
 		}
 
 		void action2()
 		{
-//			protGraph.ResetSignals();
-			startPropagate("PKCa", SignalType.Plus, "YAP");
+			startPropagate("PKCa");
 		}
 
 		void action3()
 		{
-//			protGraph.ResetSignals();
-			startPropagate("Ecad", SignalType.Plus, "YAP");
+			startPropagate("Ecad");
 		}
 
 		void action4()
 		{
-//			protGraph.ResetSignals();
-			startPropagate("PKCa", SignalType.Plus, "YAP");
-			startPropagate("Ecad", SignalType.Plus, "YAP");
+			startPropagate("PKCa");
+			startPropagate("Ecad");
 		}
 
 		void action5()
 		{
-//			protGraph.ResetSignals();
-			startPropagate("FZD", SignalType.Plus, "bCAT");
+			startPropagate("FZD");
 		}
 
 		void action6()
 		{
-//			protGraph.ResetSignals();
-			startPropagate("bCAT", SignalType.Plus);
+			startPropagate("bCAT");
 		}
 
 
@@ -337,7 +340,7 @@ namespace Proteins
 			}
 			if (e.Key == Keys.R)
 			{
-				protGraph.ResetSignals();
+				ResetGraph();
 			}
 			//if (e.Key == Keys.Q)
 			//{
@@ -373,6 +376,12 @@ namespace Proteins
 		}
 
 
+		void ResetGraph()
+		{
+			protGraph.ClearInputs();
+			protGraph.AddInput("GSK3b");
+			protGraph.AddInput("YAP");
+		}
 
 		/// <summary>
 		/// Saves configuration on exit.
@@ -403,7 +412,8 @@ namespace Proteins
 
 			if (timer2 > delay2)
 			{
-	//			startPropagate("YAP", SignalType.Plus);
+//				action1();
+//				protGraph.GetProtein("GSK3b").Activate();
 				timer2 = 0;
 			}
 
@@ -440,27 +450,16 @@ namespace Proteins
 			protGraph.Propagate(grSys, delay);
 		}
 
-		void startPropagate(string startName, SignalType signal, string endName = "")
+		void startPropagate(string startName)
 		{
-			timer = 0;
+//			timer = 0;
 			var grSys = GetService<GraphSystem>();
-			grSys.DehighlightNodes();
 			if (grSys.NodeCount == 0)
 			{
 				return;
 			}
-
-			protGraph.GetProtein(startName).Signal = signal;
-			if (endName != "")
-			{
-				protGraph.GetProtein(endName).Signal = SignalType.End;
-			}
-			grSys.HighlightNodes(protGraph.GetIdByName(startName), nodeHighlightColorPos);
-		}
-
-
-//		void startPropagate(List<string> startNames, SignalType )
-
-		
+//			protGraph.GetProtein(startName).Activate();
+			protGraph.AddInput(startName);
+		}		
 	}
 }
