@@ -45,6 +45,7 @@ struct Link {
 	uint par2;
 	float length;
 	float strength;
+	float4 color;
 };
 
 

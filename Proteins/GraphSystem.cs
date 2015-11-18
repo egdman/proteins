@@ -469,6 +469,30 @@ namespace GraphVis {
 		}
 
 
+		public void PaintEdges(IEnumerable<int> edgeIndices, Color color)
+		{
+			Link[] links = new Link[lay.LinkCount];
+			lay.LinksBuffer.GetData(links);
+			foreach (int index in edgeIndices)
+			{
+				links[index].color = color.ToVector4();
+			}
+			lay.LinksBuffer.SetData(links);
+		}
+
+
+		public void PaintAllEdges(Color color)
+		{
+			Link[] links = new Link[lay.LinkCount];
+			lay.LinksBuffer.GetData(links);
+			for ( int i = 0; i < lay.LinkCount; ++i )
+			{
+				links[i].color = color.ToVector4();
+			}
+			lay.LinksBuffer.SetData(links);
+		}
+
+
 		public void HighlightNodes(int nodeIndex, Color color)
 		{
 			HighlightNodes(new int[1] { nodeIndex }, color);
@@ -576,7 +600,7 @@ namespace GraphVis {
 
 
 
-		void addEdge( int end1, int end2, float length, float strength )
+		void addEdge( int end1, int end2, float length, float strength, Color color )
 		{
 			int edgeNumber = edgeList.Count;
 			edgeList.Add( new Link{
@@ -584,6 +608,7 @@ namespace GraphVis {
 					par2 = (uint)end2,
 					length = length,
 					strength = strength,
+					color = color.ToVector4(),
 				}
 			);
 			edgeIndexLists[end1].Add(edgeNumber);
@@ -646,7 +671,7 @@ namespace GraphVis {
 			}
 			foreach (var e in graph.Edges)
 			{
-				addEdge(e.End1, e.End2, e.Length, e.Value);
+				addEdge(e.End1, e.End2, e.Length, e.Value, new Color(1.0f, 1.0f, 1.0f, 1.0f));
 			}
 			setBuffers();
 		}

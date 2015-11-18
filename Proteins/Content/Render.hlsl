@@ -1,5 +1,5 @@
 #if 0
-$ubershader	DRAW POINT|LINE|SELECTION|HIGH_LINE|SPARKS ABSOLUTE_POS|RELATIVE_POS
+$ubershader	DRAW POINT|(LINE +HIGH_LINE)|SELECTION|SPARKS ABSOLUTE_POS|RELATIVE_POS
 #endif
 
 struct PARAMS {
@@ -50,6 +50,8 @@ struct Link {
 	uint par1;
 	uint par2;
 	float length;
+	float strength;
+	float4 color;
 };
 
 SamplerState					Sampler				: 	register(s0);
@@ -216,64 +218,6 @@ void GSMain( point VSOutput inputPoint[1], inout TriangleStream<GSOutput> output
 
 
 
-
-
-
-#ifdef LINE
-[maxvertexcount(2)]
-void GSMain( point VSOutput inputLine[1], inout LineStream<GSOutput> outputStream )
-{
-	GSOutput p1, p2;
-
-	Link lk = linksBuffer[ inputLine[0].vertexID ];
-	PARTICLE3D end1 = particleReadBuffer[ lk.par1 ];
-	PARTICLE3D end2 = particleReadBuffer[ lk.par2 ];
-	PARTICLE3D referencePrt = particleReadBuffer[ Params.SelectedParticle ];
-
-// Draw with reference to a selected particle:
-#ifdef RELATIVE_POS
-	float4 pos1 = float4( end1.Position.xyz - referencePrt.Position.xyz, 1 );
-	float4 pos2 = float4( end2.Position.xyz - referencePrt.Position.xyz, 1 );
-#endif // RELATIVE_POS
-
-// Draw without a reference:
-#ifdef ABSOLUTE_POS
-	float4 pos1 = float4( end1.Position.xyz, 1 );
-	float4 pos2 = float4( end2.Position.xyz, 1 );
-#endif // ABSOLUTE_POS
-
-
-	float4 posV1	=	mul( pos1, Params.View );
-	float4 posV2	=	mul( pos2, Params.View );
-
-
-
-//	PARTICLE3D end1 = particleReadBuffer[inputLine[0].vertexID];
-//	float4 pos1 = float4( end1.Position.xyz, 1 );
-//	float4 pos2 = float4( end1.Position.xyz + float3(5,0,0), 1 );
-
-//	float4 posV1	=	mul( pos1, Params.View );
-//	float4 posV2	=	mul( pos2, Params.View );
-
-	p1.Position		=	mul( posV1, Params.Projection );
-	p2.Position		=	mul( posV2, Params.Projection );
-
-	p1.TexCoord		=	float2(0, 0);
-	p2.TexCoord		=	float2(0, 0);
-
-	float c			=	Params.edgeOpacity;
-	p1.Color		=	float4(c,c,c,0);
-	p2.Color		=	float4(c,c,c,0);
-
-	outputStream.Append(p1);
-	outputStream.Append(p2);
-	outputStream.RestartStrip(); 
-
-
-}
-
-#endif // LINE
-
 #ifdef SELECTION
 
 [maxvertexcount(8)]
@@ -331,15 +275,14 @@ void GSMain( point VSOutput inputPoint[1], inout TriangleStream<GSOutput> output
 
 
 
-
-// Draw highlighted links: --------------------------------------------------------------------
-#ifdef HIGH_LINE
+// draw lines: ------------------------------------------------------------------------------------
+#ifdef LINE
 [maxvertexcount(2)]
 void GSMain( point VSOutput inputLine[1], inout LineStream<GSOutput> outputStream )
 {
 	GSOutput p1, p2;
 
-	Link lk = linksBuffer[ SelectedLinkIndices[inputLine[0].vertexID] ];
+	Link lk = linksBuffer[ inputLine[0].vertexID ];
 	PARTICLE3D end1 = particleReadBuffer[ lk.par1 ];
 	PARTICLE3D end2 = particleReadBuffer[ lk.par2 ];
 	PARTICLE3D referencePrt = particleReadBuffer[ Params.SelectedParticle ];
@@ -357,9 +300,9 @@ void GSMain( point VSOutput inputLine[1], inout LineStream<GSOutput> outputStrea
 #endif // ABSOLUTE_POS
 
 
-
 	float4 posV1	=	mul( pos1, Params.View );
 	float4 posV2	=	mul( pos2, Params.View );
+
 
 	p1.Position		=	mul( posV1, Params.Projection );
 	p2.Position		=	mul( posV2, Params.Projection );
@@ -367,24 +310,83 @@ void GSMain( point VSOutput inputLine[1], inout LineStream<GSOutput> outputStrea
 	p1.TexCoord		=	float2(0, 0);
 	p2.TexCoord		=	float2(0, 0);
 
-	p1.Color		=	Params.edgeColor;
-	p2.Color		=	Params.edgeColor;
+	float opac		=	Params.edgeOpacity;
+
+// if line is highlighted, draw at full opacity:
+#ifdef HIGH_LINE
+	opac			=	1.0f;
+#endif
+
+	float4 color	=	mul(lk.color, opac);
+
+	p1.Color		=	color;
+	p2.Color		=	color;
 
 	outputStream.Append(p1);
 	outputStream.Append(p2);
 	outputStream.RestartStrip(); 
 
+
 }
 
-#endif // HIGH_LINE
+#endif // LINE
+// ------------------------------------------------------------------------------------------------
 
 
-#if defined(LINE) || defined(HIGH_LINE)
+
+
+//#ifdef HIGH_LINE
+//[maxvertexcount(2)]
+//void GSMain( point VSOutput inputLine[1], inout LineStream<GSOutput> outputStream )
+//{
+//	GSOutput p1, p2;
+//
+//	Link lk = linksBuffer[ SelectedLinkIndices[inputLine[0].vertexID] ];
+//	PARTICLE3D end1 = particleReadBuffer[ lk.par1 ];
+//	PARTICLE3D end2 = particleReadBuffer[ lk.par2 ];
+//	PARTICLE3D referencePrt = particleReadBuffer[ Params.SelectedParticle ];
+//
+//// Draw with reference to a selected particle:
+//#ifdef RELATIVE_POS
+//	float4 pos1 = float4( end1.Position.xyz - referencePrt.Position.xyz, 1 );
+//	float4 pos2 = float4( end2.Position.xyz - referencePrt.Position.xyz, 1 );
+//#endif // RELATIVE_POS
+//
+//// Draw without a reference:
+//#ifdef ABSOLUTE_POS
+//	float4 pos1 = float4( end1.Position.xyz, 1 );
+//	float4 pos2 = float4( end2.Position.xyz, 1 );
+//#endif // ABSOLUTE_POS
+//
+//
+//
+//	float4 posV1	=	mul( pos1, Params.View );
+//	float4 posV2	=	mul( pos2, Params.View );
+//
+//	p1.Position		=	mul( posV1, Params.Projection );
+//	p2.Position		=	mul( posV2, Params.Projection );
+//
+//	p1.TexCoord		=	float2(0, 0);
+//	p2.TexCoord		=	float2(0, 0);
+//
+//	p1.Color		=	Params.edgeColor;
+//	p2.Color		=	Params.edgeColor;
+//
+//	outputStream.Append(p1);
+//	outputStream.Append(p2);
+//	outputStream.RestartStrip(); 
+//
+//}
+//
+//#endif // HIGH_LINE
+
+
+#ifdef LINE
 float4 PSMain( GSOutput input ) : SV_Target
 {
 	return float4(input.Color.rgb,1);
 }
-#endif // LINE || HIGH_LINE
+#endif // LINE
 
 
 
@@ -394,14 +396,6 @@ float4 PSMain( GSOutput input ) : SV_Target
 	return Texture.Sample( Sampler, input.TexCoord ) * float4(input.Color.rgb,1);
 }
 #endif // POINT or SPARK or SELECTION
-
-
-//#ifdef SELECTION
-//float4 PSMain( GSOutput input ) : SV_Target
-//{
-//	return SelectionTexture.Sample( Sampler, input.TexCoord ) * float4(input.Color.rgb,1);
-//}
-//#endif // SELECTION
 
 
 #endif //DRAW

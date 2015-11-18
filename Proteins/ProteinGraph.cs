@@ -32,6 +32,9 @@ namespace Proteins
 		public Color HighlightNodesColorPos { get; set; }
 		public Color HighlightNodesColorNeg { get; set; }
 
+		public Color EdgeNeutralColor { get; set; }
+		public Color EdgePosColor { get; set; }
+		public Color EdgeNegColor { get; set; }
 
 		List<int> inputs;
 
@@ -45,9 +48,14 @@ namespace Proteins
 		public ProteinGraph() : base()
 		{
 			idByName = new Dictionary<string, int>();
+
 			HighlightNodesColorPos = 
 				HighlightNodesColorNeg = 
+				EdgeNeutralColor =
+				EdgePosColor = 
+				EdgeNegColor =
 				Color.White;
+
 			inputs = new List<int>();
 			coupleStrength = 5.0f;
 			decoupleStrength = 0.5f;
@@ -230,6 +238,7 @@ namespace Proteins
 				strength = 0;
 			}
 			edge.Value = strength;
+
 			AddEdge(edge);
 		}
 
@@ -241,35 +250,20 @@ namespace Proteins
 			graphSystem.DehighlightNodes();
 			
 
-			List<int> activateNodes = new List<int>();
-			List<int> blockNodes = new List<int>();
+			List<int> activateNodes	= new List<int>();
+			List<int> blockNodes	= new List<int>();
+
+			List<int> activateEdges	= new List<int>();
+			List<int> blockEdges	= new List<int>();
+
+			List<int> decoupleEdges	= new List<int>();
+			List<int> coupleEdges	= new List<int>();
 
 			// activate input proteins:
 			foreach (int i in inputs)
 			{
 				GetProtein(i).Activate();
 			}
-
-
-
-			// coupling / decoupling: -------------------------------------
-			foreach (ProteinInteraction e in Edges)
-			{
-				if (e.Type == "b")
-				{
-					if (!GetProtein(e.End1).Active && !GetProtein(e.End2).Active)
-					{
-						if (e.Value > decoupleStrength)
-						{
-							decouple(GetProtein(e.End1).Name, GetProtein(e.End2).Name, graphSystem);
-						}
-					}
-				}
-			}
-			// ------------------------------------------------------------
-
-
-
 
 
 			highlight(graphSystem);
@@ -282,36 +276,67 @@ namespace Proteins
 					foreach (var tuple in outInteractions)
 					{
 						var outInteraction = tuple.Item1;
+						int outInteractionId = tuple.Item2;
+
 						ProteinNode nextProt = GetProtein(outInteraction.End2);
 						if (outInteraction.Type == "-")
 						{
-							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, HighlightNodesColorNeg);
+							// uncomment to add blocking sparks:
+			//				graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, HighlightNodesColorNeg);
 							blockNodes.Add(outInteraction.End2);
+							blockEdges.Add(outInteractionId);
 						}
 						else if (outInteraction.Type == "+")
 						{
 							graphSystem.AddSpark(outInteraction.End1, outInteraction.End2, time, HighlightNodesColorPos);
 							activateNodes.Add(outInteraction.End2);
+
+							foreach (var t in GetInteractions(prot.Name, nextProt.Name))
+							{
+								activateEdges.Add(t.Item2);
+							}
 						}
 						else if (outInteraction.Type == "b")
 						{
 							if (outInteraction.Value > decoupleStrength)
 							{
-								decouple(prot.Name, nextProt.Name, graphSystem);
+								decoupleEdges.Add(outInteractionId);
 							}
 							else
 							{
-								couple(prot.Name, nextProt.Name, graphSystem);
+								coupleEdges.Add(outInteractionId);
 							}
 						}
 					}
 				}
 			}
 
-
+			// launch new sparks:
 			graphSystem.RefreshSparks();
+
+			// activate and block nodes:
+			changeNodeStates(blockNodes, activateNodes, graphSystem);
+
+
+			// couple and decouple nodes:
+			List<Tuple<List<int>, float>> edgeLists = new List<Tuple<List<int>,float>>();
+			edgeLists.Add(new Tuple<List<int>,float>(coupleEdges,	coupleStrength));
+			edgeLists.Add(new Tuple<List<int>,float>(decoupleEdges,	decoupleStrength));
+			changeEdgeValues(edgeLists, graphSystem);
+
+			// paint edges:
+			graphSystem.PaintAllEdges(EdgeNeutralColor);
+			graphSystem.PaintEdges(activateEdges, EdgePosColor);
+			graphSystem.PaintEdges(blockEdges, EdgeNegColor);
+		}
+
+
+
+		void changeNodeStates(IEnumerable<int> blockNodes, IEnumerable<int> activateNodes, GraphSystem gs)
+		{
 			DeactivateAll();
 			UnblockAll();
+
 			foreach (var i in activateNodes)
 			{
 				GetProtein(i).Activate();
@@ -322,7 +347,6 @@ namespace Proteins
 				GetProtein(i).Blocked = true;
 			}
 		}
-
 
 
 		void highlight(GraphSystem graphSystem)
@@ -339,58 +363,90 @@ namespace Proteins
 		}
 
 
-		public void DeactivateAll()
+		public List<int> DeactivateAll()
 		{
-			foreach (ProteinNode prot in Nodes)
+			List<int> switched = new List<int>();
+			for (int i = 0; i < Nodes.Count; ++i)
 			{
+				ProteinNode prot = (ProteinNode)Nodes[i];
+				if (prot.Active)
+				{
+					switched.Add(i);
+				}
 				prot.Deactivate();
 			}
+			return switched;
 		}
 
 
-		public void UnblockAll()
+
+		public List<int> UnblockAll()
 		{
-			foreach (ProteinNode prot in Nodes)
+			List<int> switched = new List<int>();
+			for (int i = 0; i < Nodes.Count; ++i)
 			{
+				ProteinNode prot = (ProteinNode)Nodes[i];
+				if (prot.Blocked)
+				{
+					switched.Add(i);
+				}
 				prot.Blocked = false;
 			}
-		}
-		
-		void couple(string name1, string name2, GraphSystem graphSystem)
-		{
-			changeEdgeValue(name1, name2, coupleStrength, graphSystem);
+			return switched;
 		}
 
 
-		void decouple(string name1, string name2, GraphSystem graphSystem)
+		void changeEdgeValues(IEnumerable<Tuple<List<int>, float>> edgeIds, GraphSystem gs)
 		{
-			changeEdgeValue(name1, name2, decoupleStrength, graphSystem);
-		}
-
-
-		void changeEdgeValue(string name1, string name2, float value, GraphSystem graphSystem)
-		{
-			List<Tuple<ProteinInteraction, int>> interactions =	GetInteractions(name1, name2);
-
-			var graph = graphSystem.GetGraph();
-			foreach (var inter in interactions)
+			var graph = gs.GetGraph();
+			foreach (var tuple in edgeIds)
 			{
-				int index = inter.Item2;
-				var interaction = inter.Item1;
-				graph.Edges[index].Value = value;
-				this.Edges[index].Value = value;
+				foreach (int id in tuple.Item1)
+				{
+					graph.Edges[id].Value = tuple.Item2;
+					// to keep track of edge values without the need to get the graph from GraphSystem:
+					this.Edges[id].Value = tuple.Item2;
+				}
 			}
-			graphSystem.UpdateGraph(graph);
+			gs.UpdateGraph(graph);
 		}
 
-		void decoupleEverything(GraphSystem graphSystem)
-		{
-			var graph = graphSystem.GetGraph();
-			foreach (var e in graph.Edges)
-			{
-				e.Value = decoupleStrength;
-			}
-			graphSystem.UpdateGraph(graph);
-		}
+
+		//void couple(string name1, string name2, GraphSystem graphSystem)
+		//{
+		//	changeEdgeValue(name1, name2, coupleStrength, graphSystem);
+		//}
+
+
+		//void decouple(string name1, string name2, GraphSystem graphSystem)
+		//{
+		//	changeEdgeValue(name1, name2, decoupleStrength, graphSystem);
+		//}
+
+
+		//void changeEdgeValue(string name1, string name2, float value, GraphSystem graphSystem)
+		//{
+		//	List<Tuple<ProteinInteraction, int>> interactions =	GetInteractions(name1, name2);
+
+		//	var graph = graphSystem.GetGraph();
+		//	foreach (var inter in interactions)
+		//	{
+		//		int index = inter.Item2;
+		//		var interaction = inter.Item1;
+		//		graph.Edges[index].Value = value;
+		//		this.Edges[index].Value = value;
+		//	}
+		//	graphSystem.UpdateGraph(graph);
+		//}
+
+		//void decoupleEverything(GraphSystem graphSystem)
+		//{
+		//	var graph = graphSystem.GetGraph();
+		//	foreach (var e in graph.Edges)
+		//	{
+		//		e.Value = decoupleStrength;
+		//	}
+		//	graphSystem.UpdateGraph(graph);
+		//}
 	}
 }

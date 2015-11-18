@@ -53,7 +53,7 @@ namespace GraphVis
 
 
 	// link between 2 particles:
-	[StructLayout(LayoutKind.Explicit)]
+	[StructLayout(LayoutKind.Explicit, Size=32)]
 	public struct Link
 	{
 		[FieldOffset(0)]
@@ -64,6 +64,8 @@ namespace GraphVis
 		public float length;
 		[FieldOffset(12)]
 		public float strength;
+		[FieldOffset(16)]
+		public Vector4 color;
 	}
 
 

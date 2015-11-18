@@ -193,10 +193,15 @@ namespace Proteins
 			gs.BlendMode = BlendState.Additive;
 
 			protGraph.ReadFromFile("../../../../signalling_table.csv");
-			ResetGraph();
 
+			// setting colors:
 			protGraph.HighlightNodesColorPos = nodeHighlightColorPos;
 			protGraph.HighlightNodesColorNeg = nodeHighlightColorNeg;
+			protGraph.EdgePosColor = nodeHighlightColorPos;
+			protGraph.EdgeNegColor = nodeHighlightColorNeg;
+			protGraph.EdgeNeutralColor = Color.White;
+
+			ResetGraph();
 
 			var graphSys = GetService<GraphSystem>();
 
@@ -381,6 +386,7 @@ namespace Proteins
 			protGraph.ClearInputs();
 			protGraph.AddInput("GSK3b");
 			protGraph.AddInput("YAP");
+			protGraph.AddInput("bCAT");
 		}
 
 		/// <summary>
@@ -403,18 +409,10 @@ namespace Proteins
 		{
 			var ds = GetService<DebugStrings>();
 			timer	+= gameTime.Elapsed.Milliseconds;
-			timer2	+= gameTime.Elapsed.Milliseconds;
 			if (timer > delay)
 			{
 				propagate();
 				timer = 0;
-			}
-
-			if (timer2 > delay2)
-			{
-//				action1();
-//				protGraph.GetProtein("GSK3b").Activate();
-				timer2 = 0;
 			}
 
 			ds.Add(Color.Orange, "FPS {0}", gameTime.Fps);
@@ -450,15 +448,14 @@ namespace Proteins
 			protGraph.Propagate(grSys, delay);
 		}
 
+
 		void startPropagate(string startName)
 		{
-//			timer = 0;
 			var grSys = GetService<GraphSystem>();
 			if (grSys.NodeCount == 0)
 			{
 				return;
 			}
-//			protGraph.GetProtein(startName).Activate();
 			protGraph.AddInput(startName);
 		}		
 	}
